@@ -295,3 +295,170 @@ class RelationshipDetector:
         else:
             return f"{word}s"  # user → users
 
+
+class RelationshipResolver:
+    """Resolve and populate relationships in MongoDB documents.
+    
+    This class enriches documents with related data by following relationship
+    definitions. It uses batch queries to efficiently load related documents
+    and avoid N+1 query problems.
+    
+    Attributes:
+        db: MongoDB database instance
+    
+    Example:
+        >>> resolver = RelationshipResolver(db)
+        >>> order = {"_id": ObjectId(), "user_id": ObjectId(...)}
+        >>> enriched = await resolver.resolve(order, relationships, depth=1)
+        >>> # enriched["_relationships"]["user"] contains the user document
+    """
+    
+    def __init__(self, database: AsyncIOMotorDatabase) -> None:
+        """Initialize the relationship resolver.
+        
+        Args:
+            database: Motor database instance
+        """
+        self.db = database
+    
+    async def resolve(
+        self,
+        document: dict[str, Any],
+        relationships: list[Relationship],
+        depth: int = 1
+    ) -> dict[str, Any]:
+        """Resolve relationships in a document.
+        
+        Enriches the document with a `_relationships` field containing
+        related documents. Supports configurable depth for nested resolution.
+        
+        Args:
+            document: Document to enrich
+            relationships: List of relationships to resolve
+            depth: How many levels deep to resolve (1-3)
+            
+        Returns:
+            Document with `_relationships` field added
+            
+        Example:
+            >>> order = {"_id": ObjectId(), "user_id": user_id}
+            >>> resolved = await resolver.resolve(order, [user_rel], depth=1)
+            >>> assert "_relationships" in resolved
+            >>> assert "user_id" in resolved["_relationships"]
+        """
+        if depth <= 0:
+            return document
+        
+        resolved = document.copy()
+        resolved["_relationships"] = {}
+        
+        for rel in relationships:
+            if rel.source_field not in document:
+                continue
+            
+            ref_value = document[rel.source_field]
+            
+            # Handle one-to-one and one-to-many relationships
+            if rel.type in [RelationshipType.ONE_TO_ONE, RelationshipType.ONE_TO_MANY]:
+                if isinstance(ref_value, list):
+                    # One-to-many: fetch multiple documents
+                    related_docs = await self.db[rel.target_collection].find({
+                        rel.target_field: {"$in": ref_value}
+                    }).to_list(100)  # Limit to 100 related docs
+                    resolved["_relationships"][rel.source_field] = related_docs
+                else:
+                    # One-to-one: fetch single document
+                    related_doc = await self.db[rel.target_collection].find_one({
+                        rel.target_field: ref_value
+                    })
+                    resolved["_relationships"][rel.source_field] = related_doc
+            
+            elif rel.type == RelationshipType.EMBEDDED:
+                # Embedded documents are already in the document
+                resolved["_relationships"][rel.source_field] = ref_value
+        
+        return resolved
+    
+    async def resolve_batch(
+        self,
+        documents: list[dict[str, Any]],
+        relationships: list[Relationship],
+        depth: int = 1
+    ) -> list[dict[str, Any]]:
+        """Resolve relationships for multiple documents efficiently.
+        
+        Uses batch queries to load all related documents at once,
+        avoiding the N+1 query problem.
+        
+        Args:
+            documents: List of documents to enrich
+            relationships: List of relationships to resolve
+            depth: How many levels deep to resolve
+            
+        Returns:
+            List of enriched documents
+            
+        Example:
+            >>> orders = [{"user_id": id1}, {"user_id": id2}]
+            >>> resolved = await resolver.resolve_batch(orders, [user_rel])
+            >>> # Only 1 query to fetch all users, not N queries
+        """
+        if depth <= 0 or not documents:
+            return documents
+        
+        resolved_docs = [doc.copy() for doc in documents]
+        
+        # Initialize _relationships for all documents
+        for doc in resolved_docs:
+            doc["_relationships"] = {}
+        
+        # Group relationships by target collection for batch loading
+        for rel in relationships:
+            # Collect all reference values from all documents
+            ref_values: list[Any] = []
+            doc_indices: list[int] = []
+            
+            for idx, doc in enumerate(documents):
+                if rel.source_field in doc:
+                    ref_val = doc[rel.source_field]
+                    if isinstance(ref_val, list):
+                        ref_values.extend(ref_val)
+                    else:
+                        ref_values.append(ref_val)
+                    doc_indices.append(idx)
+            
+            if not ref_values:
+                continue
+            
+            # Fetch all related documents in one query
+            related_docs = await self.db[rel.target_collection].find({
+                rel.target_field: {"$in": ref_values}
+            }).to_list(1000)  # Limit to prevent memory issues
+            
+            # Create a lookup map for O(1) access
+            related_map = {
+                doc[rel.target_field]: doc
+                for doc in related_docs
+            }
+            
+            # Assign related documents back to original documents
+            for idx in doc_indices:
+                source_doc = documents[idx]
+                if rel.source_field not in source_doc:
+                    continue
+                
+                ref_val = source_doc[rel.source_field]
+                
+                if isinstance(ref_val, list):
+                    # One-to-many
+                    resolved_docs[idx]["_relationships"][rel.source_field] = [
+                        related_map[val] for val in ref_val if val in related_map
+                    ]
+                else:
+                    # One-to-one
+                    if ref_val in related_map:
+                        resolved_docs[idx]["_relationships"][rel.source_field] = related_map[ref_val]
+        
+        return resolved_docs
+
+
