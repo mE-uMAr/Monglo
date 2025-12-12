@@ -57,6 +57,24 @@ from .operations.pagination import PaginationHandler, PaginationStrategy
 from .operations.export import ExportOperations, ExportFormat, export_collection
 from .operations.aggregations import AggregationOperations
 
+# Views exports
+from .views import BaseView, ViewType, TableView, DocumentView
+
+# Serializers exports
+from .serializers import JSONSerializer, TableSerializer, DocumentSerializer
+
+# Fields exports
+from .fields import (
+    BaseField,
+    StringField,
+    NumberField,
+    BooleanField,
+    DateField,
+    DateTimeField,
+    ObjectIdField,
+    DBRefField,
+)
+
 __all__ = [
     # Metadata
     "__version__",
@@ -89,5 +107,23 @@ __all__ = [
     "ExportFormat",
     "export_collection",
     "AggregationOperations",
+    # Views
+    "BaseView",
+    "ViewType",
+    "TableView",
+    "DocumentView",
+    # Serializers
+    "JSONSerializer",
+    "TableSerializer",
+    "DocumentSerializer",
+    # Fields
+    "BaseField",
+    "StringField",
+    "NumberField",
+    "BooleanField",
+    "DateField",
+    "DateTimeField",
+    "ObjectIdField",
+    "DBRefField",
 ]
 
