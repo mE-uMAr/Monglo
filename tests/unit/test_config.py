@@ -1,8 +1,3 @@
-"""
-Unit tests for the configuration system.
-
-Tests all configuration models including validation, defaults, and serialization.
-"""
 
 import pytest
 from pydantic import ValidationError
@@ -14,12 +9,9 @@ from monglo.core.config import (
     FilterConfig,
 )
 
-
 class TestTableViewConfig:
-    """Test TableViewConfig model."""
 
     def test_default_values(self):
-        """Test that default values are set correctly."""
         config = TableViewConfig()
 
         assert config.columns == []
@@ -30,7 +22,6 @@ class TestTableViewConfig:
         assert config.row_actions == ["view", "edit", "delete"]
 
     def test_custom_values(self):
-        """Test setting custom values."""
         config = TableViewConfig(
             columns=[{"field": "name", "width": 200}],
             default_sort=[("created_at", -1)],
@@ -45,7 +36,6 @@ class TestTableViewConfig:
         assert config.enable_bulk_actions is False
 
     def test_per_page_validation(self):
-        """Test per_page validation constraints."""
         # Valid range
         config = TableViewConfig(per_page=50)
         assert config.per_page == 50
@@ -60,12 +50,9 @@ class TestTableViewConfig:
             TableViewConfig(per_page=101)
         assert "less than or equal to 100" in str(exc_info.value)
 
-
 class TestDocumentViewConfig:
-    """Test DocumentViewConfig model."""
 
     def test_default_values(self):
-        """Test that default values are set correctly."""
         config = DocumentViewConfig()
 
         assert config.layout == "tree"
@@ -75,7 +62,6 @@ class TestDocumentViewConfig:
         assert config.relationship_depth == 1
 
     def test_layout_values(self):
-        """Test layout literal type validation."""
         # Valid values
         config1 = DocumentViewConfig(layout="tree")
         assert config1.layout == "tree"
@@ -88,7 +74,6 @@ class TestDocumentViewConfig:
             DocumentViewConfig(layout="invalid")
 
     def test_relationship_depth_validation(self):
-        """Test relationship_depth constraints."""
         # Valid range
         config = DocumentViewConfig(relationship_depth=2)
         assert config.relationship_depth == 2
@@ -101,12 +86,9 @@ class TestDocumentViewConfig:
         with pytest.raises(ValidationError):
             DocumentViewConfig(relationship_depth=4)
 
-
 class TestFilterConfig:
-    """Test FilterConfig model."""
 
     def test_required_fields(self):
-        """Test that required fields are enforced."""
         # Missing required fields
         with pytest.raises(ValidationError):
             FilterConfig()
@@ -119,7 +101,6 @@ class TestFilterConfig:
         assert config.options is None
 
     def test_filter_types(self):
-        """Test all filter type literals."""
         valid_types = ["eq", "ne", "gt", "lt", "gte", "lte", "in", "regex", "range", "date_range"]
 
         for filter_type in valid_types:
@@ -127,12 +108,10 @@ class TestFilterConfig:
             assert config.type == filter_type
 
     def test_invalid_filter_type(self):
-        """Test that invalid filter types are rejected."""
         with pytest.raises(ValidationError):
             FilterConfig(field="test", type="invalid")
 
     def test_optional_fields(self):
-        """Test optional label and options fields."""
         config = FilterConfig(
             field="category",
             type="in",
@@ -143,12 +122,9 @@ class TestFilterConfig:
         assert config.label == "Product Category"
         assert len(config.options) == 3
 
-
 class TestCollectionConfig:
-    """Test CollectionConfig model."""
 
     def test_default_values(self):
-        """Test default values initialization."""
         config = CollectionConfig()
 
         assert config.name is None
@@ -166,7 +142,6 @@ class TestCollectionConfig:
         assert config.pagination_config["per_page"] == 20
 
     def test_custom_configuration(self):
-        """Test custom configuration values."""
         config = CollectionConfig(
             name="users",
             display_name="User Accounts",
@@ -186,7 +161,6 @@ class TestCollectionConfig:
         assert len(config.filters) == 1
 
     def test_nested_config_validation(self):
-        """Test that nested configs are validated."""
         # Invalid table_view
         with pytest.raises(ValidationError):
             CollectionConfig(table_view=TableViewConfig(per_page=1000))  # Exceeds max
@@ -196,7 +170,6 @@ class TestCollectionConfig:
             CollectionConfig(document_view=DocumentViewConfig(relationship_depth=10))  # Exceeds max
 
     def test_from_schema_factory(self):
-        """Test creating config from introspected schema."""
         schema = {
             "name": {"type": "string", "frequency": 1.0},
             "email": {"type": "string", "frequency": 1.0},
@@ -229,7 +202,6 @@ class TestCollectionConfig:
         assert all(schema[field]["type"] in sortable_types for field in config.sortable_fields)
 
     def test_from_schema_empty(self):
-        """Test from_schema with empty schema."""
         config = CollectionConfig.from_schema({})
 
         assert config.list_fields == []
@@ -237,7 +209,6 @@ class TestCollectionConfig:
         assert config.sortable_fields == []
 
     def test_from_schema_no_strings(self):
-        """Test from_schema with no string fields."""
         schema = {
             "count": {"type": "number"},
             "is_active": {"type": "boolean"},
@@ -252,7 +223,6 @@ class TestCollectionConfig:
         assert len(config.sortable_fields) > 0
 
     def test_permissions_config(self):
-        """Test permissions configuration."""
         config = CollectionConfig(
             permissions={
                 "admin": ["create", "read", "update", "delete"],
@@ -266,7 +236,6 @@ class TestCollectionConfig:
         assert config.permissions["user"] == ["read"]
 
     def test_pagination_config(self):
-        """Test pagination configuration."""
         config = CollectionConfig(
             pagination_config={"style": "cursor", "per_page": 30, "max_per_page": 200}
         )

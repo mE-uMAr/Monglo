@@ -1,8 +1,3 @@
-"""
-Document view configuration generator.
-
-Generates configuration for document detail/edit views.
-"""
 
 from __future__ import annotations
 
@@ -10,34 +5,13 @@ from typing import Any
 
 from .base import BaseView, ViewType, ViewUtilities
 
-
 class DocumentView(BaseView):
-    """Generate document view configuration for a collection.
-
-    Creates configuration for displaying individual documents in
-    detail or edit mode with proper field types and widgets.
-
-    Example:
-        >>> doc_view = DocumentView(collection_admin)
-        >>> config = doc_view.render_config()
-        >>> # Returns document configuration with fields, widgets, relationships
-    """
 
     def render_config(self, schema: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Generate document view configuration.
-
-        Args:
-            schema: Optional schema dictionary for field type detection
-
-        Returns:
-            Document view configuration dictionary
-        """
         schema = schema or {}
 
-        # Build field configurations
         fields = self._build_fields(schema)
 
-        # Build relationship configurations
         relationships = self._build_relationships()
 
         return {
@@ -53,14 +27,6 @@ class DocumentView(BaseView):
         }
 
     def _build_fields(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
-        """Build field configurations.
-
-        Args:
-            schema: Schema dictionary
-
-        Returns:
-            List of field configurations
-        """
         fields = []
 
         # If no schema, use list_fields as default
@@ -83,7 +49,6 @@ class DocumentView(BaseView):
                 "required": field_name == "_id",  # Only _id is required by default
             }
 
-            # Add nested fields for embedded documents
             if field_type == "embedded" and field_name in schema:
                 nested_fields = self._build_nested_fields(field_name, schema)
                 if nested_fields:
@@ -96,15 +61,6 @@ class DocumentView(BaseView):
     def _build_nested_fields(
         self, parent_field: str, schema: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Build nested field configurations for embedded documents.
-
-        Args:
-            parent_field: Parent field name
-            schema: Schema dictionary
-
-        Returns:
-            List of nested field configurations
-        """
         nested_fields = []
         prefix = f"{parent_field}."
 
@@ -129,11 +85,6 @@ class DocumentView(BaseView):
         return nested_fields
 
     def _build_relationships(self) -> list[dict[str, Any]]:
-        """Build relationship configurations.
-
-        Returns:
-            List of relationship configurations
-        """
         relationships = []
 
         for rel in self.config.relationships:

@@ -43,23 +43,19 @@ transaction_manager = TransactionManager(client)
 # LIBRARY CODE - Monglo Handles Everything
 # =============================================================================
 
-# Initialize Monglo engine with your config
 engine = MongloEngine(
     database=db,
     auto_discover=True,
     auth_provider=auth_provider
 )
 
-# Create FastAPI app
 app = FastAPI(
     title="Advanced Monglo Demo",
     description="Showcasing all Monglo features with clear library/app separation"
 )
 
-
 @app.on_event("startup")
 async def startup():
-    """Initialize Monglo and mount routes."""
     # Library initializes and auto-discovers
     await engine.initialize()
     
@@ -97,17 +93,12 @@ async def startup():
     print(f"📚 API Docs:    http://localhost:8000/docs")
     print("="*70 + "\n")
 
-
 # =============================================================================
 # APPLICATION CODE - Your Custom Endpoints (Optional)
 # =============================================================================
 
 @app.post("/api/custom/bulk-create-users")
 async def custom_bulk_create(count: int):
-    """
-    YOUR business logic: Bulk create users.
-    LIBRARY handles: The actual database operations.
-    """
     from monglo.operations.crud import CRUDOperations
     
     # Your business logic
@@ -140,13 +131,8 @@ async def custom_bulk_create(count: int):
     
     return {"success": True, "created": len(created)}
 
-
 @app.post("/api/custom/create-order-with-transaction")
 async def custom_create_order(user_id: str, items: list[dict]):
-    """
-    YOUR business logic: Create order with transaction.
-    LIBRARY handles: ACID guarantees, rollback on failure.
-    """
     from monglo.operations.crud import CRUDOperations
     
     # Your business validation
@@ -161,7 +147,6 @@ async def custom_create_order(user_id: str, items: list[dict]):
         # Verify user exists (your logic)
         user = await users_crud.get(user_id)
         
-        # Create order (library handles)
         order = await orders_crud.create({
             "user_id": user_id,
             "items": items,
@@ -171,7 +156,6 @@ async def custom_create_order(user_id: str, items: list[dict]):
         # Both operations succeed or both fail (library guarantees)
         
     return {"success": True, "order_id": str(order["_id"])}
-
 
 # =============================================================================
 # Run the Application

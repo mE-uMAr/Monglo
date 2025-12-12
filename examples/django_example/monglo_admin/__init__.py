@@ -1,1 +1,0 @@
-"""Monglo Admin Django project."""

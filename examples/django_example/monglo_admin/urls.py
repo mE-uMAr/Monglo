@@ -1,16 +1,3 @@
-"""
-✨ TRULY MINIMAL Django Example ✨
-
-This shows how easy Monglo is with Django - just include URL patterns!
-
-NO manual code for:
-- ❌ Templates
-- ❌ Serialization
-- ❌ Views
-- ❌ Routing
-
-ALL handled by the library automatically!
-"""
 
 from django.urls import path
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -30,10 +17,7 @@ db = client.monglo_demo
 # Step 2: Initialize Monglo (ONE line!)
 engine = MongloEngine(database=db, auto_discover=True)
 
-
-# Initialize engine (this would typically be in AppConfig.ready())
 async def initialize():
-    """Initialize Monglo engine."""
     await engine.initialize()
     print("\n" + "="*70)
     print("🎉 Monglo Admin is Ready!")
@@ -42,7 +26,6 @@ async def initialize():
     print(f"🌐 Admin UI:    http://localhost:8000/admin")
     print(f"📡 API:         http://localhost:8000/api")
     print("="*70 + "\n")
-
 
 # Step 3: URL Configuration - Just include the patterns!
 urlpatterns = [

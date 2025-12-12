@@ -1,18 +1,11 @@
-"""
-Integration tests for CRUD operations.
-
-Tests complete workflows across multiple components with real MongoDB.
-"""
 
 import pytest
 from bson import ObjectId
 from monglo.operations.crud import CRUDOperations
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_full_crud_lifecycle(registered_engine, test_db):
-    """Test create → read → update → delete workflow."""
     admin = registered_engine.registry.get("users")
     crud = CRUDOperations(admin)
 
@@ -60,29 +53,23 @@ async def test_full_crud_lifecycle(registered_engine, test_db):
     with pytest.raises(KeyError):
         await crud.get(user_id)
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_pagination_consistency(registered_engine, test_db):
-    """Test pagination returns consistent, non-overlapping results."""
     admin = registered_engine.registry.get("products")
     crud = CRUDOperations(admin)
 
-    # Insert 25 test products
     products = [{"name": f"Product {i:02d}", "price": i * 10, "stock": 100} for i in range(25)]
     await test_db.products.insert_many(products)
 
-    # Get page 1
     page1 = await crud.list(page=1, per_page=10, sort=[("name", 1)])
     assert len(page1["items"]) == 10
     assert page1["total"] >= 25
     assert page1["page"] == 1
 
-    # Get page 2
     page2 = await crud.list(page=2, per_page=10, sort=[("name", 1)])
     assert len(page2["items"]) == 10
 
-    # Get page 3
     page3 = await crud.list(page=3, per_page=10, sort=[("name", 1)])
     assert len(page3["items"]) >= 5  # At least 5 remaining
 
@@ -98,15 +85,12 @@ async def test_pagination_consistency(registered_engine, test_db):
     page1_names = [doc["name"] for doc in page1["items"]]
     assert page1_names == sorted(page1_names)
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_search_across_fields(registered_engine, test_db, sample_products):
-    """Test search functionality across multiple fields."""
     admin = registered_engine.registry.get("products")
     crud = CRUDOperations(admin)
 
-    # Insert products with searchable content
     await test_db.products.insert_many(
         [
             {"name": "iPhone 15 Pro", "description": "Latest Apple smartphone", "price": 999},
@@ -131,15 +115,12 @@ async def test_search_across_fields(registered_engine, test_db, sample_products)
     matched_items = [item for item in results["items"] if "M3" in item.get("description", "")]
     assert len(matched_items) >= 1
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_bulk_operations(registered_engine, test_db):
-    """Test bulk delete operations."""
     admin = registered_engine.registry.get("users")
     crud = CRUDOperations(admin)
 
-    # Create multiple test users
     test_users = [
         {"name": f"Bulk User {i}", "email": f"bulk{i}@test.com", "age": 20 + i} for i in range(5)
     ]
@@ -157,15 +138,12 @@ async def test_bulk_operations(registered_engine, test_db):
         exists = await crud.exists(user_id)
         assert exists is False
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_filtering_with_operators(registered_engine, test_db):
-    """Test filter operations with MongoDB operators."""
     admin = registered_engine.registry.get("products")
     crud = CRUDOperations(admin)
 
-    # Insert test products with varying prices
     await test_db.products.insert_many(
         [
             {"name": "Product A", "price": 10, "category": "electronics", "stock": 100},
@@ -193,15 +171,12 @@ async def test_filtering_with_operators(registered_engine, test_db):
     results = await crud.list(filters={"category": "books", "price__gte": 30})
     assert results["total"] >= 2
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_sorting_multiple_fields(registered_engine, test_db):
-    """Test sorting by multiple fields."""
     admin = registered_engine.registry.get("products")
     crud = CRUDOperations(admin)
 
-    # Insert products
     await test_db.products.insert_many(
         [
             {"name": "A Product", "category": "electronics", "price": 30},
@@ -211,7 +186,6 @@ async def test_sorting_multiple_fields(registered_engine, test_db):
         ]
     )
 
-    # Sort by category ascending, then price descending
     results = await crud.list(sort=[("category", 1), ("price", -1)], per_page=100)
 
     items = results["items"]
@@ -227,21 +201,17 @@ async def test_sorting_multiple_fields(registered_engine, test_db):
     if len(electronics) >= 2:
         assert electronics[0]["price"] >= electronics[1]["price"]
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_concurrent_updates(registered_engine, test_db):
-    """Test concurrent updates to same document."""
     import asyncio
 
     admin = registered_engine.registry.get("users")
     crud = CRUDOperations(admin)
 
-    # Create test user
     user = await crud.create({"name": "Concurrent Test", "counter": 0})
     user_id = str(user["_id"])
 
-    # Perform concurrent updates
     async def increment_counter():
         doc = await crud.get(user_id)
         new_counter = doc["counter"] + 1

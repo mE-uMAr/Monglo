@@ -1,4 +1,3 @@
-"""Core package initialization."""
 
 __all__ = [
     "engine",

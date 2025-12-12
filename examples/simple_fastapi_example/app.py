@@ -1,9 +1,3 @@
-"""
-MINIMAL FastAPI Example - This is how easy it should be!
-
-This example shows the LIBRARY doing all the work.
-Developers write 10 lines of code and get a full admin interface.
-"""
 
 from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -24,11 +18,8 @@ app = FastAPI(title="Monglo Admin - Minimal Example")
 # 3. Initialize Monglo engine
 engine = MongloEngine(database=db, auto_discover=True)
 
-
 @app.on_event("startup")
 async def startup():
-    """Initialize Monglo."""
-    # Initialize the engine (auto-discovers collections, relationships, etc.)
     await engine.initialize()
     
     # Mount API routes (for programmatic access)
@@ -48,12 +39,9 @@ async def startup():
     print(f"📚 Docs:     http://localhost:8000/docs")
     print("="*60 + "\n")
 
-
 @app.on_event("shutdown")
 async def shutdown():
-    """Cleanup."""
     client.close()
-
 
 # ============= That's it! No templates, no serialization, no routing! =============
 

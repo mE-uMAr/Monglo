@@ -1,18 +1,10 @@
-"""
-Integration tests for pagination.
-
-Tests cursor and offset pagination strategies.
-"""
 
 import pytest
 from monglo.operations.pagination import PaginationHandler
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_offset_pagination(test_db):
-    """Test offset-based pagination."""
-    # Insert test data
     test_docs = [{"value": i} for i in range(100)]
     await test_db.items.insert_many(test_docs)
 
@@ -41,14 +33,11 @@ async def test_offset_pagination(test_db):
     assert page5["pagination"]["has_next"] is False
     assert page5["pagination"]["has_prev"] is True
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_cursor_pagination(test_db):
-    """Test cursor-based pagination."""
     from bson import ObjectId
 
-    # Insert test data with known IDs
     test_ids = [ObjectId() for _ in range(50)]
     test_docs = [{"_id": test_ids[i], "value": i} for i in range(50)]
     await test_db.items.insert_many(test_docs)
@@ -71,12 +60,9 @@ async def test_cursor_pagination(test_db):
     page2_ids = {doc["_id"] for doc in page2["items"]}
     assert len(page1_ids & page2_ids) == 0
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_pagination_with_filtering(test_db):
-    """Test pagination combined with filters."""
-    # Insert mixed data
     await test_db.items.insert_many(
         [
             *[{"category": "A", "value": i} for i in range(30)],
@@ -93,12 +79,9 @@ async def test_pagination_with_filtering(test_db):
     assert len(page1["items"]) == 10
     assert all(doc["category"] == "A" for doc in page1["items"])
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_pagination_with_sorting(test_db):
-    """Test pagination with custom sorting."""
-    # Insert unsorted data
     import random
 
     values = list(range(50))
@@ -121,12 +104,9 @@ async def test_pagination_with_sorting(test_db):
     page2_values = [doc["value"] for doc in page2["items"]]
     assert max(page2_values) < min(page1_values)
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_pagination_edge_cases(test_db):
-    """Test pagination edge cases."""
-    # Insert 25 documents
     await test_db.items.insert_many([{"value": i} for i in range(25)])
 
     pag = PaginationHandler(test_db.items)
@@ -148,12 +128,9 @@ async def test_pagination_edge_cases(test_db):
     assert len(page1_single["items"]) == 1
     assert page1_single["pagination"]["total_pages"] == 25
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_pagination_metadata_accuracy(test_db):
-    """Test pagination metadata calculations."""
-    # Insert 47 documents (prime number for interesting division)
     await test_db.items.insert_many([{"value": i} for i in range(47)])
 
     pag = PaginationHandler(test_db.items)

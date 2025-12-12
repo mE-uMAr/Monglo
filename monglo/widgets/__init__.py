@@ -1,8 +1,3 @@
-"""
-Widget exports.
-
-All widget classes are available for import from monglo.widgets.
-"""
 
 from .base import BaseWidget
 from .custom import ConditionalWidget, CustomWidget, WidgetGroup

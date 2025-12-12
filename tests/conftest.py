@@ -1,8 +1,3 @@
-"""
-Pytest configuration and shared fixtures for Monglo tests.
-
-Provides database fixtures, sample data, and test utilities.
-"""
 
 import pytest
 import asyncio
@@ -13,23 +8,15 @@ from bson import ObjectId
 from monglo.core.engine import MongloEngine
 from monglo.core.config import CollectionConfig
 
-
 # Configure pytest-asyncio
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create an event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
-
 @pytest.fixture(scope="session")
 async def mongodb_client() -> AsyncGenerator[AsyncIOMotorClient, None]:
-    """Create a MongoDB client for testing.
-
-    Uses a test database to avoid affecting production data.
-    Set MONGODB_TEST_URI environment variable to customize connection.
-    """
     import os
 
     # Use test URI or default to localhost
@@ -47,13 +34,8 @@ async def mongodb_client() -> AsyncGenerator[AsyncIOMotorClient, None]:
 
     client.close()
 
-
 @pytest.fixture
 async def test_db(mongodb_client: AsyncIOMotorClient) -> AsyncGenerator[AsyncIOMotorDatabase, None]:
-    """Create a clean test database for each test.
-
-    Database is dropped after each test to ensure isolation.
-    """
     db_name = f"monglo_test_{ObjectId()}"
     db = mongodb_client[db_name]
 
@@ -62,10 +44,8 @@ async def test_db(mongodb_client: AsyncIOMotorClient) -> AsyncGenerator[AsyncIOM
     # Cleanup: drop the test database
     await mongodb_client.drop_database(db_name)
 
-
 @pytest.fixture
 async def sample_users(test_db: AsyncIOMotorDatabase) -> list[dict]:
-    """Insert sample user documents into test database."""
     users = [
         {
             "_id": ObjectId(),
@@ -96,10 +76,8 @@ async def sample_users(test_db: AsyncIOMotorDatabase) -> list[dict]:
     await test_db.users.insert_many(users)
     return users
 
-
 @pytest.fixture
 async def sample_orders(test_db: AsyncIOMotorDatabase, sample_users: list[dict]) -> list[dict]:
-    """Insert sample order documents with references to users."""
     orders = [
         {
             "_id": ObjectId(),
@@ -127,10 +105,8 @@ async def sample_orders(test_db: AsyncIOMotorDatabase, sample_users: list[dict])
     await test_db.orders.insert_many(orders)
     return orders
 
-
 @pytest.fixture
 async def sample_products(test_db: AsyncIOMotorDatabase) -> list[dict]:
-    """Insert sample product documents."""
     products = [
         {
             "_id": ObjectId(),
@@ -161,10 +137,8 @@ async def sample_products(test_db: AsyncIOMotorDatabase) -> list[dict]:
     await test_db.products.insert_many(products)
     return products
 
-
 @pytest.fixture
 async def monglo_engine(test_db: AsyncIOMotorDatabase) -> MongloEngine:
-    """Create a Monglo engine instance for testing."""
     engine = MongloEngine(
         database=test_db,
         auto_discover=False,  # Manual registration for controlled tests
@@ -174,7 +148,6 @@ async def monglo_engine(test_db: AsyncIOMotorDatabase) -> MongloEngine:
     await engine.initialize()
     return engine
 
-
 @pytest.fixture
 async def registered_engine(
     monglo_engine: MongloEngine,
@@ -182,27 +155,18 @@ async def registered_engine(
     sample_orders: list[dict],
     sample_products: list[dict],
 ) -> MongloEngine:
-    """Create engine with collections registered.
-
-    Depends on sample data fixtures to ensure collections exist.
-    """
-    # Register collections
     await monglo_engine.register_collection("users")
     await monglo_engine.register_collection("orders")
     await monglo_engine.register_collection("products")
 
     return monglo_engine
 
-
 # Test utilities
 
-
 class TestDataFactory:
-    """Factory for creating test data."""
 
     @staticmethod
     def create_user(**kwargs) -> dict:
-        """Create a user document with default values."""
         defaults = {
             "_id": ObjectId(),
             "name": "Test User",
@@ -215,7 +179,6 @@ class TestDataFactory:
 
     @staticmethod
     def create_order(user_id: ObjectId | None = None, **kwargs) -> dict:
-        """Create an order document with default values."""
         defaults = {
             "_id": ObjectId(),
             "user_id": user_id or ObjectId(),
@@ -228,7 +191,6 @@ class TestDataFactory:
 
     @staticmethod
     def create_product(**kwargs) -> dict:
-        """Create a product document with default values."""
         defaults = {
             "_id": ObjectId(),
             "name": "Test Product",
@@ -239,18 +201,13 @@ class TestDataFactory:
         defaults.update(kwargs)
         return defaults
 
-
 @pytest.fixture
 def test_data_factory() -> TestDataFactory:
-    """Provide test data factory."""
     return TestDataFactory()
-
 
 # Markers for test categorization
 
-
 def pytest_configure(config):
-    """Register custom pytest markers."""
     config.addinivalue_line(
         "markers", "unit: mark test as a unit test (fast, no external dependencies)"
     )

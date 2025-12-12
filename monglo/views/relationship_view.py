@@ -1,55 +1,16 @@
-"""
-Relationship graph view for visualizing collection relationships.
-
-Provides D3.js-compatible graph data structures for relationship visualization.
-"""
 
 from typing import Any
 
 from ..core.registry import CollectionAdmin
 from .base import BaseView
 
-
 class RelationshipView(BaseView):
-    """Relationship graph visualization view.
-
-    Generates configuration for D3.js force-directed graph visualization
-    of collection relationships.
-
-    Example output format:
-        {
-            "type": "graph",
-            "nodes": [
-                {"id": "users", "label": "Users", "type": "collection"},
-                {"id": "orders", "label": "Orders", "type": "collection"}
-            ],
-            "edges": [
-                {
-                    "source": "orders",
-                    "target": "users",
-                    "label": "user_id",
-                    "type": "one_to_one"
-                }
-            ],
-            "layout": "force-directed"
-        }
-    """
 
     def __init__(self, collection_admin: CollectionAdmin):
-        """Initialize relationship view.
-
-        Args:
-            collection_admin: Collection admin instance
-        """
         self.collection = collection_admin
         self.engine = None  # Will be set by adapter if needed
 
     def render_config(self) -> dict[str, Any]:
-        """Generate relationship graph configuration.
-
-        Returns:
-            D3.js-compatible graph structure
-        """
         return {
             "type": "graph",
             "collection": self.collection.name,
@@ -60,14 +21,8 @@ class RelationshipView(BaseView):
         }
 
     def _build_nodes(self) -> list[dict[str, Any]]:
-        """Build graph nodes from collection and its relationships.
-
-        Returns:
-            List of node objects
-        """
         nodes = []
 
-        # Add current collection as primary node
         nodes.append(
             {
                 "id": self.collection.name,
@@ -78,7 +33,6 @@ class RelationshipView(BaseView):
             }
         )
 
-        # Add related collections as secondary nodes
         related_collections = set()
         for rel in self.collection.relationships:
             if rel.target_collection not in related_collections:
@@ -95,11 +49,6 @@ class RelationshipView(BaseView):
         return nodes
 
     def _build_edges(self) -> list[dict[str, Any]]:
-        """Build graph edges from relationships.
-
-        Returns:
-            List of edge objects
-        """
         edges = []
 
         for rel in self.collection.relationships:
@@ -117,19 +66,10 @@ class RelationshipView(BaseView):
         return edges
 
     def render_full_graph(self, all_collections: dict[str, CollectionAdmin]) -> dict[str, Any]:
-        """Generate full database relationship graph.
-
-        Args:
-            all_collections: Dictionary of all collection admins
-
-        Returns:
-            Complete graph of all collections and relationships
-        """
         all_nodes = []
         all_edges = []
         seen_edges = set()
 
-        # Build nodes for all collections
         for name, admin in all_collections.items():
             all_nodes.append(
                 {
@@ -140,10 +80,8 @@ class RelationshipView(BaseView):
                 }
             )
 
-        # Build edges from all relationships
         for _name, admin in all_collections.items():
             for rel in admin.relationships:
-                # Create unique edge identifier
                 edge_id = f"{rel.source_collection}:{rel.source_field}:{rel.target_collection}"
 
                 if edge_id not in seen_edges:

@@ -1,4 +1,3 @@
-"""Views package for Monglo."""
 
 from .base import BaseView, ViewType, ViewUtilities
 from .document_view import DocumentView

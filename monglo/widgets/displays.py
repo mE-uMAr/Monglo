@@ -1,20 +1,9 @@
-"""
-Display widgets for read-only field presentation.
-
-Provides labels, badges, links, and other display-only components.
-"""
 
 from typing import Any
 
 from .base import BaseWidget
 
-
 class Label(BaseWidget):
-    """Simple text label widget for display.
-
-    Example:
-        >>> widget = Label(format="bold")
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -23,13 +12,7 @@ class Label(BaseWidget):
             "color": self.options.get("color"),
         }
 
-
 class Badge(BaseWidget):
-    """Badge widget for status/tag display.
-
-    Example:
-        >>> widget = Badge(variant="success")  # success, warning, danger, info
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -39,13 +22,7 @@ class Badge(BaseWidget):
             "rounded": self.options.get("rounded", True),
         }
 
-
 class Link(BaseWidget):
-    """Hyperlink widget.
-
-    Example:
-        >>> widget = Link(target="_blank", format="url")
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -55,13 +32,7 @@ class Link(BaseWidget):
             "show_icon": self.options.get("show_icon", True),
         }
 
-
 class Image(BaseWidget):
-    """Image display widget.
-
-    Example:
-        >>> widget = Image(width=200, height=200, thumbnail=True)
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -73,13 +44,7 @@ class Image(BaseWidget):
             "lazy_load": self.options.get("lazy_load", True),
         }
 
-
 class JSONDisplay(BaseWidget):
-    """JSON tree display widget.
-
-    Example:
-        >>> widget = JSONDisplay(expanded=True, highlight=True)
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -89,13 +54,7 @@ class JSONDisplay(BaseWidget):
             "line_numbers": self.options.get("line_numbers", True),
         }
 
-
 class CodeDisplay(BaseWidget):
-    """Code block display widget with syntax highlighting.
-
-    Example:
-        >>> widget = CodeDisplay(language="python", theme="monokai")
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -106,13 +65,7 @@ class CodeDisplay(BaseWidget):
             "copy_button": self.options.get("copy_button", True),
         }
 
-
 class ProgressBar(BaseWidget):
-    """Progress bar widget for numeric values.
-
-    Example:
-        >>> widget = ProgressBar(min=0, max=100, show_value=True)
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {

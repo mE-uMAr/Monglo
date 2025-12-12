@@ -19,15 +19,8 @@ app = FastAPI(title="Monglo Admin")
 # Step 3: Initialize Monglo (ONE line!)
 engine = MongloEngine(database=db, auto_discover=True)
 
-
 @app.on_event("startup")
 async def startup():
-    """
-    Initialize Monglo.
-    
-    This is the ONLY setup code needed. Everything else is automatic.
-    """
-    # Initialize engine (discovers collections, relationships, schemas)
     await engine.initialize()
     
     # Mount UI - library handles EVERYTHING (templates, static, routing, serialization)
@@ -46,12 +39,9 @@ async def startup():
     print(f"📚 Docs:        http://localhost:8000/docs")
     print("="*70 + "\n")
 
-
 @app.on_event("shutdown")
 async def shutdown():
-    """Cleanup."""
     client.close()
-
 
 # ============================================================================
 # That's it! TRULY minimal. No templates, no routes, no filters, no config!

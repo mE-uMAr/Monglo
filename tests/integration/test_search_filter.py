@@ -1,19 +1,11 @@
-"""
-Integration tests for search and filtering.
-
-Tests search operations and query building with filters.
-"""
 
 import pytest
 from monglo.operations.search import SearchOperations
 from monglo.core.query_builder import QueryBuilder
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_basic_search(test_db):
-    """Test basic search functionality."""
-    # Insert searchable data
     await test_db.articles.insert_many(
         [
             {"title": "Python Programming", "content": "Learn Python basics"},
@@ -33,11 +25,9 @@ async def test_basic_search(test_db):
     results = await search_ops.search("MongoDB")
     assert len(results) == 2
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_case_insensitive_search(test_db):
-    """Test case-insensitive search."""
     await test_db.articles.insert_many(
         [{"title": "PYTHON Guide"}, {"title": "python basics"}, {"title": "PyThOn advanced"}]
     )
@@ -49,11 +39,9 @@ async def test_case_insensitive_search(test_db):
         results = await search_ops.search(query, case_sensitive=False)
         assert len(results) == 3
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_search_with_highlighting(test_db):
-    """Test search with field highlighting."""
     await test_db.articles.insert_many(
         [
             {"title": "Python Guide", "content": "JavaScript tutorial", "author": "John"},
@@ -65,7 +53,6 @@ async def test_search_with_highlighting(test_db):
 
     results = await search_ops.search_with_highlight("Python")
 
-    # Check highlighting
     for doc in results:
         assert "_matched_fields" in doc
         # Should highlight fields that contain "Python"
@@ -73,12 +60,9 @@ async def test_search_with_highlighting(test_db):
         has_python = any("python" in str(doc.get(field, "")).lower() for field in matched)
         assert has_python
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_search_pagination(test_db):
-    """Test paginated search results."""
-    # Insert 50 documents containing "test"
     await test_db.articles.insert_many(
         [{"title": f"Test Article {i}", "content": "Content"} for i in range(50)]
     )
@@ -99,11 +83,9 @@ async def test_search_pagination(test_db):
     page2_titles = {doc["title"] for doc in page2["items"]}
     assert len(page1_titles & page2_titles) == 0
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_filter_building(test_db):
-    """Test query filter building."""
     await test_db.products.insert_many(
         [
             {"name": "Product A", "price": 10, "stock": 100, "category": "electronics"},
@@ -134,11 +116,9 @@ async def test_filter_building(test_db):
     count = await test_db.products.count_documents(query)
     assert count == 4
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_combined_filters(test_db):
-    """Test combining multiple filters."""
     await test_db.products.insert_many(
         [
             {"name": "Item 1", "price": 15, "stock": 100, "active": True},
@@ -148,7 +128,6 @@ async def test_combined_filters(test_db):
         ]
     )
 
-    # Combine multiple filters
     filters = {"active": True, "price__gte": 20, "stock__gt": 0}
     query = QueryBuilder.build_filter(filters)
     results = await test_db.products.find(query).to_list(10)
@@ -160,11 +139,9 @@ async def test_combined_filters(test_db):
         assert doc["price"] >= 20
         assert doc["stock"] > 0
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_search_and_filter_combined(test_db):
-    """Test combining search with filters."""
     await test_db.products.insert_many(
         [
             {"name": "Python Book", "category": "books", "price": 30, "in_stock": True},
@@ -174,13 +151,10 @@ async def test_search_and_filter_combined(test_db):
         ]
     )
 
-    # Build search query
     search_query = QueryBuilder.build_search_query("Python", ["name"])
 
-    # Build filter query
     filter_query = QueryBuilder.build_filter({"in_stock": True, "price__gte": 25})
 
-    # Combine queries
     combined = QueryBuilder.combine_queries(search_query, filter_query)
 
     results = await test_db.products.find(combined).to_list(10)
@@ -192,11 +166,9 @@ async def test_search_and_filter_combined(test_db):
         assert doc["in_stock"] is True
         assert doc["price"] >= 25
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_regex_special_characters(test_db):
-    """Test search handles regex special characters."""
     await test_db.articles.insert_many(
         [
             {"title": "C++ Programming"},

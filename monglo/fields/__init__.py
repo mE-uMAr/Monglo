@@ -1,4 +1,3 @@
-"""Fields package for Monglo."""
 
 from .base import BaseField
 from .primitives import BooleanField, DateField, DateTimeField, NumberField, StringField

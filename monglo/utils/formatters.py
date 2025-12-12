@@ -1,8 +1,3 @@
-"""
-Data formatters for display purposes.
-
-Provides formatting functions for different data types.
-"""
 
 from __future__ import annotations
 
@@ -10,21 +5,10 @@ from datetime import datetime, date
 from typing import Any
 from bson import ObjectId
 
-
 class Formatter:
-    """
-    Data formatting utilities for display.
-    
-    Example:
-        >>> Formatter.format_datetime(datetime.now())
-        '2025-01-13 02:47:50'
-        >>> Formatter.format_number(1234567.89)
-        '1,234,567.89'
-    """
     
     @staticmethod
     def format_datetime(value: datetime | None, format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
-        """Format datetime for display."""
         if value is None:
             return ""
         if isinstance(value, datetime):
@@ -33,7 +17,6 @@ class Formatter:
     
     @staticmethod
     def format_date(value: date | datetime | None, format_str: str = "%Y-%m-%d") -> str:
-        """Format date for display."""
         if value is None:
             return ""
         if isinstance(value, (date, datetime)):
@@ -42,7 +25,6 @@ class Formatter:
     
     @staticmethod
     def format_number(value: int | float | None, decimals: int = 2) -> str:
-        """Format number with thousand separators."""
         if value is None:
             return ""
         if isinstance(value, float):
@@ -53,7 +35,6 @@ class Formatter:
     
     @staticmethod
     def format_currency(value: int | float | None, currency: str = "$") -> str:
-        """Format number as currency."""
         if value is None:
             return ""
         formatted = Formatter.format_number(value, decimals=2)
@@ -61,14 +42,12 @@ class Formatter:
     
     @staticmethod
     def format_percentage(value: int | float | None, decimals: int = 1) -> str:
-        """Format number as percentage."""
         if value is None:
             return ""
         return f"{value:.{decimals}f}%"
     
     @staticmethod
     def format_objectid(value: ObjectId | str | None) -> str:
-        """Format ObjectId as shortened string."""
         if value is None:
             return ""
         id_str = str(value)
@@ -79,14 +58,12 @@ class Formatter:
     
     @staticmethod
     def format_boolean(value: bool | None, true_text: str = "Yes", false_text: str = "No") -> str:
-        """Format boolean as text."""
         if value is None:
             return ""
         return true_text if value else false_text
     
     @staticmethod
     def truncate(value: str | None, length: int = 50, suffix: str = "...") -> str:
-        """Truncate string to length."""
         if value is None:
             return ""
         value_str = str(value)
@@ -96,7 +73,6 @@ class Formatter:
     
     @staticmethod
     def format_bytes(value: int | None) -> str:
-        """Format bytes as human-readable size."""
         if value is None:
             return ""
         
@@ -109,7 +85,6 @@ class Formatter:
     
     @staticmethod
     def format_list(value: list | None, separator: str = ", ", max_items: int = 5) -> str:
-        """Format list as string."""
         if value is None or not isinstance(value, list):
             return ""
         
@@ -125,7 +100,6 @@ class Formatter:
     
     @staticmethod
     def format_dict_summary(value: dict | None, max_keys: int = 3) -> str:
-        """Format dict as summary string."""
         if value is None or not isinstance(value, dict):
             return ""
         

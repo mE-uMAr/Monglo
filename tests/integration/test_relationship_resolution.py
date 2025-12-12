@@ -1,18 +1,11 @@
-"""
-Integration tests for relationship resolution.
-
-Tests relationship detection and resolution across collections.
-"""
 
 import pytest
 from bson import ObjectId
 from monglo.core.relationships import RelationshipResolver, RelationshipType
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_resolve_one_to_one_relationship(registered_engine, sample_users, sample_orders):
-    """Test resolving one-to-one relationships."""
     admin = registered_engine.registry.get("orders")
     order = await admin.collection.find_one()
 
@@ -31,26 +24,21 @@ async def test_resolve_one_to_one_relationship(registered_engine, sample_users, 
         assert "name" in user
         assert user["_id"] == order["user_id"]
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_relationship_detection_naming_convention(test_db):
-    """Test automatic relationship detection via naming convention."""
     from monglo import MongloEngine
 
-    # Create test data
     user_id = ObjectId()
     await test_db.users.insert_one({"_id": user_id, "name": "Test User"})
     await test_db.posts.insert_one(
         {"user_id": user_id, "title": "Test Post"}  # Should auto-detect as relationship
     )
 
-    # Create engine with auto-discovery
     engine = MongloEngine(database=test_db, auto_discover=False)
     await engine.initialize()
     await engine.register_collection("posts")
 
-    # Check relationship was detected
     posts_admin = engine.registry.get("posts")
     assert len(posts_admin.relationships) >= 1
 
@@ -60,15 +48,12 @@ async def test_relationship_detection_naming_convention(test_db):
     assert user_rel.target_collection == "users"
     assert user_rel.source_field == "user_id"
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_resolve_one_to_many_relationship(test_db):
-    """Test resolving one-to-many relationships (array of ObjectIds)."""
     from monglo import MongloEngine
     from monglo.core.relationships import RelationshipResolver
 
-    # Create test data
     tag_ids = [ObjectId() for _ in range(3)]
     await test_db.tags.insert_many(
         [
@@ -100,19 +85,15 @@ async def test_resolve_one_to_many_relationship(test_db):
         tag_names = {tag["name"] for tag in tags}
         assert tag_names == {"python", "mongodb", "async"}
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_relationship_batch_resolution(test_db):
-    """Test batch resolution to avoid N+1 queries."""
     from monglo import MongloEngine
     from monglo.core.relationships import RelationshipResolver
 
-    # Create users
     user_id = ObjectId()
     await test_db.users.insert_one({"_id": user_id, "name": "Author"})
 
-    # Create multiple posts by same user
     posts = [{"title": f"Post {i}", "user_id": user_id} for i in range(10)]
     await test_db.posts.insert_many(posts)
 
@@ -135,15 +116,12 @@ async def test_relationship_batch_resolution(test_db):
             user = post["_relationships"]["user_id"]
             assert user["name"] == "Author"
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_nested_relationship_resolution(test_db):
-    """Test resolving relationships with depth > 1."""
     from monglo import MongloEngine
     from monglo.core.relationships import RelationshipResolver
 
-    # Create data hierarchy: comment -> post -> user
     user_id = ObjectId()
     post_id = ObjectId()
 
@@ -175,15 +153,12 @@ async def test_nested_relationship_resolution(test_db):
             user = post["_relationships"]["user_id"]
             assert user["name"] == "Author"
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_relationship_with_missing_reference(test_db):
-    """Test graceful handling of missing referenced documents."""
     from monglo import MongloEngine
     from monglo.core.relationships import RelationshipResolver
 
-    # Create post with non-existent user_id
     fake_user_id = ObjectId()
     await test_db.posts.insert_one(
         {"title": "Orphaned Post", "user_id": fake_user_id}  # User doesn't exist
@@ -206,16 +181,13 @@ async def test_relationship_with_missing_reference(test_db):
     if "user_id" in resolved["_relationships"]:
         assert resolved["_relationships"]["user_id"] is None
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_bidirectional_relationships(test_db):
-    """Test bidirectional relationship navigation."""
     from monglo import MongloEngine
     from monglo.core.relationships import Relationship, RelationshipType
     from monglo.core.config import CollectionConfig
 
-    # Create data
     user_id = ObjectId()
     await test_db.users.insert_one({"_id": user_id, "name": "User"})
     await test_db.posts.insert_many(
@@ -226,7 +198,6 @@ async def test_bidirectional_relationships(test_db):
     engine = MongloEngine(database=test_db, auto_discover=False)
     await engine.initialize()
 
-    # Register posts collection with reverse relationship
     await engine.register_collection(
         "posts",
         config=CollectionConfig(
@@ -243,7 +214,6 @@ async def test_bidirectional_relationships(test_db):
     )
 
     posts_admin = engine.registry.get("posts")
-    # Check relationship has reverse_name
     user_rel = posts_admin.get_relationship("user_id")
     assert user_rel is not None
     assert user_rel.reverse_name == "posts"

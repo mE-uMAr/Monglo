@@ -1,8 +1,3 @@
-"""
-MINIMAL Flask Example - Library does all the work!
-
-Developers write ~10 lines and get a full admin interface.
-"""
 
 from flask import Flask
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -23,10 +18,8 @@ app = Flask(__name__)
 # 3. Initialize Monglo
 engine = MongloEngine(database=db, auto_discover=True)
 
-
 @app.before_serving
 async def startup():
-    """Initialize Monglo."""
     await engine.initialize()
     
     # Mount API routes
@@ -44,7 +37,6 @@ async def startup():
     print(f"🌐 Admin UI:  http://localhost:5000/admin")
     print(f"📡 API:      http://localhost:5000/api/admin")
     print("="*60 + "\n")
-
 
 # ============= That's it! =============
 

@@ -1,4 +1,3 @@
-"""Serializers package for Monglo."""
 
 from .document import DocumentSerializer
 from .json import JSONSerializer

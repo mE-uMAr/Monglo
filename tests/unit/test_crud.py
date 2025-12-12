@@ -1,8 +1,3 @@
-"""
-Unit tests for CRUD operations.
-
-Tests all CRUD functionality including bulk operations.
-"""
 
 import pytest
 from bson import ObjectId
@@ -10,10 +5,8 @@ from monglo.operations.crud import CRUDOperations
 from monglo.core.registry import CollectionAdmin
 from monglo.core.config import CollectionConfig
 
-
 @pytest.fixture
 async def crud_ops(test_db):
-    """Create CRUD operations instance."""
     collection = test_db.test_collection
     config = CollectionConfig(
         search_fields=["name", "email"],
@@ -22,10 +15,8 @@ async def crud_ops(test_db):
     admin = CollectionAdmin("test_collection", test_db, config)
     return CRUDOperations(admin)
 
-
 @pytest.fixture
 async def sample_doc():
-    """Sample document for testing."""
     return {
         "name": "John Doe",
         "email": "john@example.com",
@@ -33,12 +24,9 @@ async def sample_doc():
         "age": 30
     }
 
-
 class TestCRUDCreate:
-    """Test create operations."""
     
     async def test_create_document(self, crud_ops, sample_doc):
-        """Test creating a single document."""
         result = await crud_ops.create(sample_doc)
         
         assert "_id" in result
@@ -46,12 +34,10 @@ class TestCRUDCreate:
         assert result["email"] == "john@example.com"
     
     async def test_create_empty_fails(self, crud_ops):
-        """Test that creating empty document fails."""
         with pytest.raises(ValueError):
             await crud_ops.create({})
     
     async def test_bulk_create(self, crud_ops):
-        """Test bulk create operation."""
         docs = [
             {"name": f"User {i}", "email": f"user{i}@example.com"}
             for i in range(10)
@@ -62,12 +48,9 @@ class TestCRUDCreate:
         assert len(result) == 10
         assert all("_id" in doc for doc in result)
 
-
 class TestCRUDRead:
-    """Test read operations."""
     
     async def test_get_document(self, crud_ops, sample_doc):
-        """Test getting a document by ID."""
         created = await crud_ops.create(sample_doc)
         doc_id = str(created["_id"])
         
@@ -77,15 +60,12 @@ class TestCRUDRead:
         assert result["email"] == "john@example.com"
     
     async def test_get_nonexistent_fails(self, crud_ops):
-        """Test that getting nonexistent document fails."""
         fake_id = str(ObjectId())
         
         with pytest.raises(KeyError):
             await crud_ops.get(fake_id)
     
     async def test_list_documents(self, crud_ops):
-        """Test listing documents with pagination."""
-        # Create test data
         docs = [{"name": f"User {i}"} for i in range(25)]
         await crud_ops.bulk_create(docs)
         
@@ -99,7 +79,6 @@ class TestCRUDRead:
         assert result["has_prev"] is False
     
     async def test_list_with_search(self, crud_ops):
-        """Test listing with search."""
         docs = [
             {"name": "Alice", "email": "alice@example.com"},
             {"name": "Bob", "email": "bob@example.com"},
@@ -113,7 +92,6 @@ class TestCRUDRead:
         assert all("Alice" in item["name"] for item in result["items"])
     
     async def test_count(self, crud_ops):
-        """Test document count."""
         docs = [{"name": f"User {i}"} for i in range(15)]
         await crud_ops.bulk_create(docs)
         
@@ -124,19 +102,15 @@ class TestCRUDRead:
         assert count_filtered == 1
     
     async def test_exists(self, crud_ops, sample_doc):
-        """Test document existence check."""
         created = await crud_ops.create(sample_doc)
         doc_id = str(created["_id"])
         
         assert await crud_ops.exists(doc_id) is True
         assert await crud_ops.exists(str(ObjectId())) is False
 
-
 class TestCRUDUpdate:
-    """Test update operations."""
     
     async def test_update_partial(self, crud_ops, sample_doc):
-        """Test partial update."""
         created = await crud_ops.create(sample_doc)
         doc_id = str(created["_id"])
         
@@ -146,7 +120,6 @@ class TestCRUDUpdate:
         assert result["name"] == "John Doe"  # Other fields unchanged
     
     async def test_update_full_replacement(self, crud_ops, sample_doc):
-        """Test full document replacement."""
         created = await crud_ops.create(sample_doc)
         doc_id = str(created["_id"])
         
@@ -157,15 +130,12 @@ class TestCRUDUpdate:
         assert "status" not in result  # Old field removed
     
     async def test_update_nonexistent_fails(self, crud_ops):
-        """Test that updating nonexistent document fails."""
         fake_id = str(ObjectId())
         
         with pytest.raises(KeyError):
             await crud_ops.update(fake_id, {"name": "Test"})
     
     async def test_bulk_update(self, crud_ops):
-        """Test bulk update operation."""
-        # Create test data
         docs = [{"status": "pending"} for _ in range(5)]
         await crud_ops.bulk_create(docs)
         
@@ -180,12 +150,9 @@ class TestCRUDUpdate:
         assert result["matched"] == 5
         assert result["modified"] == 5
 
-
 class TestCRUDDelete:
-    """Test delete operations."""
     
     async def test_delete_document(self, crud_ops, sample_doc):
-        """Test deleting a document."""
         created = await crud_ops.create(sample_doc)
         doc_id = str(created["_id"])
         
@@ -195,19 +162,15 @@ class TestCRUDDelete:
         assert await crud_ops.exists(doc_id) is False
     
     async def test_delete_nonexistent(self, crud_ops):
-        """Test deleting nonexistent document."""
         fake_id = str(ObjectId())
         deleted = await crud_ops.delete(fake_id)
         
         assert deleted is False
     
     async def test_bulk_delete(self, crud_ops):
-        """Test bulk delete operation."""
-        # Create test data
         docs = [{"name": f"User {i}"} for i in range(10)]
         created = await crud_ops.bulk_create(docs)
         
-        # Get IDs
         ids = [str(doc["_id"]) for doc in created[:5]]
         
         # Bulk delete
@@ -216,21 +179,16 @@ class TestCRUDDelete:
         assert deleted_count == 5
         assert await crud_ops.count() == 5
 
-
 class TestCRUDEdgeCases:
-    """Test edge cases and error handling."""
     
     async def test_invalid_object_id(self, crud_ops):
-        """Test handling invalid ObjectId."""
         with pytest.raises(ValueError):
             await crud_ops.get("invalid-id")
     
     async def test_empty_bulk_create(self, crud_ops):
-        """Test bulk create with empty list."""
         result = await crud_ops.bulk_create([])
         assert result == []
     
     async def test_empty_bulk_delete(self, crud_ops):
-        """Test bulk delete with empty list."""
         result = await crud_ops.bulk_delete([])
         assert result == 0

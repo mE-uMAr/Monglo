@@ -1,20 +1,3 @@
-"""
-Django adapter for Monglo.
-
-AUTO-CREATES ALL URL PATTERNS - Developers never touch routing!
-
-Example:
-    >>> # In urls.py
-    >>> from monglo.adapters.django import create_django_urls
-    >>> from monglo import MongloEngine
-    >>> 
-    >>> engine = MongloEngine(database=db, auto_discover=True)
-    >>> await engine.initialize()
-    >>> 
-    >>> urlpatterns = [
-    ...     *create_django_urls(engine, prefix="api/admin"),
-    ... ]
-"""
 
 from __future__ import annotations
 
@@ -28,33 +11,11 @@ from django.views import View
 if TYPE_CHECKING:
     from ..core.engine import MongloEngine
 
-
 def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
-    """
-    Create Django URL patterns with ALL routes automatically.
-    
-    This creates a complete REST API for all registered collections.
-    Developers NEVER need to define routes manually.
-    
-    Args:
-        engine: Initialized MongloEngine instance
-        prefix: URL prefix for API
-    
-    Returns:
-        List of URL patterns ready to include
-    
-    Example:
-        >>> engine = MongloEngine(database=db, auto_discover=True)
-        >>> await engine.initialize()
-        >>> 
-        >>> # That's it - full API with all routes!
-       >>> urlpatterns = [*create_django_urls(engine)]
-    """
     
     # Collections list view
     class CollectionsListView(View):
         async def get(self, request):
-            """List all collections."""
             collections = []
             
             for name, admin in engine.registry._collections.items():
@@ -71,26 +32,21 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
     # Collection operations view
     class CollectionListCreateView(View):
         async def get(self, request, collection):
-            """List documents with pagination, search, filters."""
             from ..operations.crud import CRUDOperations
             from ..serializers.json import JSONSerializer
             
-            # Get query params
             page = int(request.GET.get("page", 1))
             per_page = int(request.GET.get("per_page", 20))
             search = request.GET.get("search", "")
             sort_by = request.GET.get("sort_by", "")
             sort_dir = request.GET.get("sort_dir", "asc")
             
-            # Get collection admin
             admin = engine.registry.get(collection)
             
-            # Build sort
             sort_list = None
             if sort_by:
                 sort_list = [(sort_by, -1 if sort_dir == "desc" else 1)]
             
-            # Get data
             crud = CRUDOperations(admin)
             data = await crud.list(
                 page=page,
@@ -109,7 +65,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
             })
         
         async def post(self, request, collection):
-            """Create new document."""
             from ..operations.crud import CRUDOperations
             from ..serializers.json import JSONSerializer
             
@@ -129,7 +84,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
     # Document operations view
     class DocumentDetailView(View):
         async def get(self, request, collection, id):
-            """Get single document."""
             from ..operations.crud import CRUDOperations
             from ..serializers.json import JSONSerializer
             
@@ -148,7 +102,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
             return JsonResponse({"document": serialized})
         
         async def put(self, request, collection, id):
-            """Update document."""
             from ..operations.crud import CRUDOperations
             from ..serializers.json import JSONSerializer
             
@@ -169,7 +122,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
             return JsonResponse({"success": True, "document": serialized})
         
         async def delete(self, request, collection, id):
-            """Delete document."""
             from ..operations.crud import CRUDOperations
             
             admin = engine.registry.get(collection)
@@ -185,7 +137,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
     # View configuration views
     class TableConfigView(View):
         async def get(self, request, collection):
-            """Get table view configuration."""
             from ..views.table_view import TableView
             
             admin = engine.registry.get(collection)
@@ -196,7 +147,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
     
     class DocumentConfigView(View):
         async def get(self, request, collection):
-            """Get document view configuration."""
             from ..views.document_view import DocumentView
             
             admin = engine.registry.get(collection)
@@ -207,7 +157,6 @@ def create_django_urls(engine: MongloEngine, prefix: str = "api/admin"):
     
     class RelationshipsView(View):
         async def get(self, request, collection):
-            """Get collection relationships."""
             admin = engine.registry.get(collection)
             
             relationships = [

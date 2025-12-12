@@ -1,21 +1,3 @@
-"""
-Flask UI Helper - Automatic Admin Interface Setup.
-
-Provides a complete, ready-to-use admin UI with zero configuration
-
-.
-Developers just call create_ui_blueprint() and everything works.
-
-Example:
-    >>> from monglo.ui_helpers.flask import create_ui_blueprint
-    >>> from monglo import MongloEngine
-    >>> 
-    >>> engine = MongloEngine(database=db, auto_discover=True)
-    >>> await engine.initialize()
-    >>> 
-    >>> # Full UI with templates, static files, routing!
-    >>> app.register_blueprint(create_ui_blueprint(engine))
-"""
 
 from __future__ import annotations
 
@@ -27,9 +9,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 if TYPE_CHECKING:
     from ..core.engine import MongloEngine
 
-# Get paths to UI assets
 UI_DIR = Path(__file__).parent.parent.parent / "monglo_ui"
-
 
 def create_ui_blueprint(
     engine: MongloEngine,
@@ -39,33 +19,6 @@ def create_ui_blueprint(
     logo: str | None = None,
     brand_color: str = "#10b981",
 ) -> Blueprint:
-    """
-    Create a complete admin UI blueprint with zero configuration.
-    
-    This handles everything:
-    - Static file serving
-    - Template rendering with filters
-    - All UI routes
-    - Serialization
-    
-    Args:
-        engine: Initialized MongloEngine instance
-        name: Blueprint name
-        url_prefix: URL prefix for admin
-        title: Admin interface title
-        logo: Optional logo URL
-        brand_color: Primary brand color
-    
-    Returns:
-        Flask blueprint ready to register
-    
-    Example:
-        >>> engine = MongloEngine(database=db, auto_discover=True)
-        >>> await engine.initialize()
-        >>> 
-        >>> app.register_blueprint(create_ui_blueprint(engine))
-        >>> # Visit http://localhost:5000/admin
-    """
     bp = Blueprint(
         name,
         __name__,
@@ -75,10 +28,8 @@ def create_ui_blueprint(
         static_url_path="/static"
     )
     
-    # Register template filters
     _register_filters(bp)
     
-    # Add context processor for common variables
     @bp.context_processor
     def inject_globals():
         return {
@@ -91,7 +42,6 @@ def create_ui_blueprint(
     
     @bp.route("/")
     async def admin_home():
-        """Admin home page with collection list."""
         collections = []
         
         for name, admin in engine.registry._collections.items():
@@ -111,26 +61,21 @@ def create_ui_blueprint(
     
     @bp.route("/<collection>")
     async def table_view(collection: str):
-        """Table view for a collection."""
         from ..views.table_view import TableView
         from ..operations.crud import CRUDOperations
         
-        # Get query params
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
         search = request.args.get("search", "")
         sort = request.args.get("sort", "")
         
-        # Get collection admin
         admin = engine.registry.get(collection)
         
-        # Parse sort
         sort_list = None
         if sort:
             field, direction = sort.split(":")
             sort_list = [(field, -1 if direction == "desc" else 1)]
         
-        # Get data
         crud = CRUDOperations(admin)
         data = await crud.list(
             page=page,
@@ -139,11 +84,9 @@ def create_ui_blueprint(
             sort=sort_list
         )
         
-        # Get view config
         table_view_obj = TableView(admin)
         config = table_view_obj.render_config()
         
-        # Get all collections for sidebar
         collections = await _get_all_collections(engine)
         
         return render_template(
@@ -157,15 +100,12 @@ def create_ui_blueprint(
     
     @bp.route("/<collection>/document/<id>")
     async def document_view(collection: str, id: str):
-        """Document detail view."""
         from ..views.document_view import DocumentView
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
-        # Get collection admin
         admin = engine.registry.get(collection)
         
-        # Get document
         crud = CRUDOperations(admin)
         try:
             document = await crud.get(id)
@@ -176,11 +116,9 @@ def create_ui_blueprint(
         serializer = JSONSerializer()
         serialized_doc = serializer._serialize_value(document)
         
-        # Get view config
         doc_view = DocumentView(admin)
         config = doc_view.render_config()
         
-        # Get all collections for sidebar
         collections = await _get_all_collections(engine)
         
         return render_template(
@@ -197,7 +135,6 @@ def create_ui_blueprint(
     
     @bp.route("/<collection>/<id>", methods=["DELETE"])
     async def delete_document(collection: str, id: str):
-        """Delete a document."""
         from ..operations.crud import CRUDOperations
         
         admin = engine.registry.get(collection)
@@ -208,7 +145,6 @@ def create_ui_blueprint(
     
     @bp.route("/<collection>/<id>", methods=["PUT"])
     async def update_document(collection: str, id: str):
-        """Update a document."""
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
@@ -227,7 +163,6 @@ def create_ui_blueprint(
     
     @bp.route("/<collection>", methods=["POST"])
     async def create_document(collection: str):
-        """Create a new document."""
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
@@ -246,13 +181,10 @@ def create_ui_blueprint(
     
     return bp
 
-
 def _register_filters(bp: Blueprint):
-    """Register Jinja2 filters on blueprint."""
     
     @bp.app_template_filter("format_datetime")
     def format_datetime(value):
-        """Format datetime for display."""
         if value is None:
             return ""
         from datetime import datetime
@@ -262,7 +194,6 @@ def _register_filters(bp: Blueprint):
     
     @bp.app_template_filter("type_class")
     def type_class(value):
-        """Get CSS class for value type."""
         if isinstance(value, str):
             return "string"
         elif isinstance(value, (int, float)):
@@ -277,14 +208,11 @@ def _register_filters(bp: Blueprint):
     
     @bp.app_template_filter("truncate")
     def truncate(s, length=50):
-        """Truncate string to length."""
         if not isinstance(s, str):
             s = str(s)
         return s[:length] + '...' if len(s) > length else s
 
-
 async def _get_all_collections(engine: MongloEngine) -> list[dict[str, Any]]:
-    """Get all collections with counts for sidebar."""
     collections = []
     for name, admin in engine.registry._collections.items():
         count = await admin.collection.count_documents({})

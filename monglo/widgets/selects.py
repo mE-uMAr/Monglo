@@ -1,27 +1,12 @@
-"""
-Select widgets for dropdown and multi-select fields.
-
-Provides select dropdowns, multi-select, autocomplete, and radio buttons.
-"""
 
 from typing import Any
 
 from .base import BaseWidget
 
-
 class Select(BaseWidget):
-    """Single-select dropdown widget.
-
-    Example:
-        >>> widget = Select(choices=[
-        ...     ("active", "Active"),
-        ...     ("inactive", "Inactive")
-        ... ])
-    """
 
     def render_config(self) -> dict[str, Any]:
         choices = self.options.get("choices", [])
-        # Convert list of tuples to dict format
         if choices and isinstance(choices[0], (list, tuple)):
             choices = [{"value": v, "label": label} for v, label in choices]
 
@@ -32,17 +17,7 @@ class Select(BaseWidget):
             "searchable": self.options.get("searchable", False),
         }
 
-
 class MultiSelect(BaseWidget):
-    """Multi-select dropdown widget.
-
-    Example:
-        >>> widget = MultiSelect(choices=[
-        ...     ("electronics", "Electronics"),
-        ...     ("books", "Books"),
-        ...     ("clothing", "Clothing")
-        ... ])
-    """
 
     def render_config(self) -> dict[str, Any]:
         choices = self.options.get("choices", [])
@@ -57,16 +32,7 @@ class MultiSelect(BaseWidget):
             "max_selections": self.options.get("max_selections"),
         }
 
-
 class Autocomplete(BaseWidget):
-    """Autocomplete widget with async search.
-
-    Example:
-        >>> widget = Autocomplete(
-        ...     source_url="/api/users",
-        ...     min_chars=2
-        ... )
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {
@@ -78,16 +44,7 @@ class Autocomplete(BaseWidget):
             "value_field": self.options.get("value_field", "_id"),
         }
 
-
 class RadioButtons(BaseWidget):
-    """Radio button group widget.
-
-    Example:
-        >>> widget = RadioButtons(choices=[
-        ...     ("male", "Male"),
-        ...     ("female", "Female")
-        ... ])
-    """
 
     def render_config(self) -> dict[str, Any]:
         choices = self.options.get("choices", [])
@@ -96,19 +53,7 @@ class RadioButtons(BaseWidget):
 
         return {"type": "radio", "choices": choices, "inline": self.options.get("inline", True)}
 
-
 class ReferenceSelect(BaseWidget):
-    """Select widget for MongoDB references.
-
-    Automatically loads options from related collection.
-
-    Example:
-        >>> widget = ReferenceSelect(
-        ...     collection="users",
-        ...     display_field="name",
-        ...     query={"status": "active"}
-        ... )
-    """
 
     def render_config(self) -> dict[str, Any]:
         return {

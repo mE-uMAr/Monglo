@@ -1,18 +1,10 @@
-"""
-Integration tests for aggregation operations.
-
-Tests MongoDB aggregation pipelines and statistics.
-"""
 
 import pytest
 from monglo.operations.aggregations import AggregationOperations
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_basic_aggregation(test_db):
-    """Test basic aggregation operations."""
-    # Insert sales data
     await test_db.sales.insert_many(
         [
             {"product": "A", "quantity": 10, "price": 100},
@@ -40,24 +32,19 @@ async def test_basic_aggregation(test_db):
     # Should have 2 groups
     assert len(results) == 2
 
-    # Convert to dict for easier testing
     results_dict = {r["_id"]: r for r in results}
     assert results_dict["A"]["total_quantity"] == 15
     assert results_dict["B"]["total_quantity"] == 35
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_collection_statistics(test_db):
-    """Test collection statistics generation."""
-    # Insert test data
     await test_db.products.insert_many(
         [{"name": f"Product {i}", "price": i * 10, "stock": i * 5} for i in range(1, 11)]
     )
 
     agg_ops = AggregationOperations(test_db.products)
 
-    # Get statistics
     stats = await agg_ops.get_statistics(["price", "stock"])
 
     assert "_id" in stats
@@ -66,12 +53,9 @@ async def test_collection_statistics(test_db):
     assert "price_max" in stats
     assert "stock_avg" in stats
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_group_by_aggregation(test_db):
-    """Test grouping data."""
-    # Insert orders
     await test_db.orders.insert_many(
         [
             {"status": "completed", "total": 100},
@@ -92,14 +76,11 @@ async def test_group_by_aggregation(test_db):
     assert results_dict["completed"]["total_sum"] == 250
     assert results_dict["completed"]["count"] == 2
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_date_range_aggregation(test_db):
-    """Test aggregation with date ranges."""
     from datetime import datetime, timedelta
 
-    # Insert events
     now = datetime.utcnow()
     await test_db.events.insert_many(
         [
@@ -118,12 +99,9 @@ async def test_date_range_aggregation(test_db):
     results = await agg_ops.aggregate(pipeline)
     assert results[0]["total"] == 4
 
-
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_nested_aggregation(test_db):
-    """Test complex nested aggregations."""
-    # Insert nested documents
     await test_db.orders.insert_many(
         [
             {

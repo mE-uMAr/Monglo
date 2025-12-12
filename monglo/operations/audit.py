@@ -1,8 +1,3 @@
-"""
-Audit logging for Monglo admin operations.
-
-Tracks all data modifications for compliance and security.
-"""
 
 from __future__ import annotations
 
@@ -12,40 +7,13 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorDatabase
 
-
 class AuditLogger:
-    """
-    Audit logger for tracking all admin operations.
-    
-    Logs create, update, delete operations with:
-    - Timestamp
-    - User (if authenticated)
-    - Action type
-    - Collection name
-    - Document ID
-    - Changes (before/after for updates)
-    
-    Example:
-        >>> logger = AuditLogger(database=db, collection_name="admin_audit_log")
-        >>> await logger.log_create(
-        ...     collection="users",
-        ...     document={"name": "Alice"},
-        ...     user={"id": "admin", "role": "admin"}
-        ... )
-    """
     
     def __init__(
         self,
         database: AsyncIOMotorDatabase,
         collection_name: str = "monglo_audit_log"
     ):
-        """
-        Initialize audit logger.
-        
-        Args:
-            database: Motor database instance
-            collection_name: Name of audit log collection
-        """
         self.db = database
         self.collection = database[collection_name]
     
@@ -55,14 +23,6 @@ class AuditLogger:
         document: dict[str, Any],
         user: dict[str, Any] | None = None
     ) -> None:
-        """
-        Log document creation.
-        
-        Args:
-            collection: Collection name
-            document: Created document
-            user: User who performed the action
-        """
         await self._log_action(
             action="create",
             collection=collection,
@@ -79,17 +39,6 @@ class AuditLogger:
         after: dict[str, Any],
         user: dict[str, Any] | None = None
     ) -> None:
-        """
-        Log document update.
-        
-        Args:
-            collection: Collection name
-            document_id: Document ID
-            before: Document state before update
-            after: Document state after update
-            user: User who performed the action
-        """
-        # Calculate changes
         changes = self._calculate_changes(before, after)
         
         await self._log_action(
@@ -109,15 +58,6 @@ class AuditLogger:
         document: dict[str, Any],
         user: dict[str, Any] | None = None
     ) -> None:
-        """
-        Log document deletion.
-        
-        Args:
-            collection: Collection name
-            document_id: Document ID
-            document: Deleted document
-            user: User who performed the action
-        """
         await self._log_action(
             action="delete",
             collection=collection,
@@ -134,16 +74,6 @@ class AuditLogger:
         user: dict[str, Any] | None = None,
         details: dict[str, Any] | None = None
     ) -> None:
-        """
-        Log bulk operation.
-        
-        Args:
-            collection: Collection name
-            action: Action type (bulk_create, bulk_update, bulk_delete)
-            count: Number of documents affected
-            user: User who performed the action
-            details: Additional details about the operation
-        """
         await self._log_action(
             action=action,
             collection=collection,
@@ -159,15 +89,6 @@ class AuditLogger:
         user: dict[str, Any] | None = None,
         **kwargs
     ) -> None:
-        """
-        Internal method to log an action.
-        
-        Args:
-            action: Action type
-            collection: Collection name
-            user: User who performed the action  
-            **kwargs: Additional data to log
-        """
         log_entry = {
             "timestamp": datetime.utcnow(),
             "action": action,
@@ -186,16 +107,6 @@ class AuditLogger:
         before: dict[str, Any],
         after: dict[str, Any]
     ) -> dict[str, dict[str, Any]]:
-        """
-        Calculate changes between before and after states.
-        
-        Args:
-            before: Document before update
-            after: Document after update
-        
-        Returns:
-            Dict of changes with old and new values
-        """
         changes = {}
         
         # Find changed fields
@@ -219,17 +130,6 @@ class AuditLogger:
         document_id: str,
         limit: int = 50
     ) -> list[dict[str, Any]]:
-        """
-        Get audit history for a specific document.
-        
-        Args:
-            collection: Collection name
-            document_id: Document ID
-            limit: Maximum number of entries to return
-        
-        Returns:
-            List of audit log entries
-        """
         cursor = self.collection.find({
             "collection": collection,
             "document_id": document_id
@@ -242,16 +142,6 @@ class AuditLogger:
         user_id: str,
         limit: int = 100
     ) -> list[dict[str, Any]]:
-        """
-        Get audit history for a specific user.
-        
-        Args:
-            user_id: User ID
-            limit: Maximum number of entries to return
-        
-        Returns:
-            List of audit log entries
-        """
         cursor = self.collection.find({
             "user.id": user_id
         }).sort("timestamp", -1).limit(limit)

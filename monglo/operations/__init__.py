@@ -1,4 +1,3 @@
-"""Operations package for Monglo."""
 
 __all__ = [
     "CRUDOperations",

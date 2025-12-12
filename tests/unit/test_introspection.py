@@ -1,8 +1,3 @@
-"""
-Unit tests for schema introspection.
-
-Tests type detection, nested documents, arrays, and field analysis.
-"""
 
 import pytest
 from datetime import datetime, date
@@ -10,23 +5,18 @@ from bson import ObjectId, DBRef
 
 from monglo.core.introspection import SchemaIntrospector
 
-
 class TestSchemaIntrospector:
-    """Test SchemaIntrospector class."""
 
     @pytest.fixture
     def mock_db(self, mocker):
-        """Create a mock database."""
         return mocker.AsyncMock()
 
     @pytest.fixture
     def introspector(self, mock_db):
-        """Create a SchemaIntrospector instance."""
         return SchemaIntrospector(mock_db)
 
     @pytest.mark.asyncio
     async def test_introspect_basic_types(self, introspector, mock_db, mocker):
-        """Test introspection of basic types."""
         documents = [
             {
                 "_id": ObjectId(),
@@ -64,7 +54,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_frequency(self, introspector, mock_db, mocker):
-        """Test field frequency calculation."""
         documents = [
             {"_id": ObjectId(), "name": "Alice", "email": "alice@example.com"},
             {"_id": ObjectId(), "name": "Bob", "email": "bob@example.com"},
@@ -88,7 +77,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_nullable(self, introspector, mock_db, mocker):
-        """Test nullable field detection."""
         documents = [
             {"_id": ObjectId(), "name": "Alice", "bio": "Developer"},
             {"_id": ObjectId(), "name": "Bob", "bio": None},
@@ -108,7 +96,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_mongodb_types(self, introspector, mock_db, mocker):
-        """Test detection of MongoDB-specific types."""
         documents = [
             {
                 "_id": ObjectId(),
@@ -133,7 +120,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_nested_documents(self, introspector, mock_db, mocker):
-        """Test introspection of nested documents."""
         documents = [
             {
                 "_id": ObjectId(),
@@ -161,7 +147,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_arrays(self, introspector, mock_db, mocker):
-        """Test introspection of array fields."""
         documents = [
             {
                 "_id": ObjectId(),
@@ -188,7 +173,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_array_of_objects(self, introspector, mock_db, mocker):
-        """Test introspection of arrays containing objects."""
         documents = [
             {
                 "_id": ObjectId(),
@@ -218,7 +202,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_empty_collection(self, introspector, mock_db, mocker):
-        """Test introspection of empty collection."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -232,7 +215,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_sample_values(self, introspector, mock_db, mocker):
-        """Test that sample values are captured."""
         documents = [
             {"_id": ObjectId(), "status": "active"},
             {"_id": ObjectId(), "status": "inactive"},
@@ -253,7 +235,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_introspect_alternative_types(self, introspector, mock_db, mocker):
-        """Test detection of fields with multiple types."""
         documents = [
             {"_id": ObjectId(), "value": 123},  # integer
             {"_id": ObjectId(), "value": "text"},  # string
@@ -274,7 +255,6 @@ class TestSchemaIntrospector:
         assert "string" in schema["value"]["alternative_types"]
 
     def test_detect_type(self, introspector):
-        """Test type detection method."""
         assert introspector._detect_type(None) == "null"
         assert introspector._detect_type(True) == "boolean"
         assert introspector._detect_type(42) == "integer"
@@ -290,7 +270,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_get_indexes(self, introspector, mock_db, mocker):
-        """Test getting index information."""
         indexes = [
             {"name": "_id_", "key": [("_id", 1)]},
             {"name": "email_1", "key": [("email", 1)], "unique": True},
@@ -309,7 +288,6 @@ class TestSchemaIntrospector:
 
     @pytest.mark.asyncio
     async def test_analyze_field_cardinality(self, introspector, mock_db, mocker):
-        """Test field cardinality analysis."""
         mock_collection = mocker.AsyncMock()
         mock_collection.count_documents = mocker.AsyncMock(return_value=100)
         mock_collection.distinct = mocker.AsyncMock(return_value=["active", "inactive", "pending"])

@@ -1,19 +1,3 @@
-"""
-FastAPI UI Helper - Automatic Admin Interface Setup.
-
-Provides a complete, ready-to-use admin UI with zero configuration.
-Developers just call create_ui_router() and everything works.
-
-Example:
-    >>> from monglo.ui_helpers.fastapi import create_ui_router
-    >>> from monglo import MongloEngine
-    >>> 
-    >>> engine = MongloEngine(database=db, auto_discover=True)
-    >>> await engine.initialize()
-    >>> 
-    >>> # That's it - full UI with templates, static files, routing!
-    >>> app.include_router(create_ui_router(engine))
-"""
 
 from __future__ import annotations
 
@@ -28,11 +12,9 @@ from fastapi.templating import Jinja2Templates
 if TYPE_CHECKING:
     from ..core.engine import MongloEngine
 
-# Get paths to UI assets (bundled with library)
 UI_DIR = Path(__file__).parent.parent.parent / "monglo_ui"
 STATIC_DIR = UI_DIR / "static"
 TEMPLATES_DIR = UI_DIR / "templates"
-
 
 def create_ui_router(
     engine: MongloEngine,
@@ -41,33 +23,6 @@ def create_ui_router(
     logo: str | None = None,
     brand_color: str = "#10b981",  # Green
 ) -> APIRouter:
-    """
-    Create a complete admin UI router with zero configuration.
-    
-    This function handles EVERYTHING:
-    - Static file serving
-    - Template rendering with all filters
-    - All UI routes
-    - Serialization
-    - View config generation
-    
-    Args:
-        engine: Initialized MongloEngine instance
-        prefix: URL prefix for admin interface
-        title: Admin interface title
-        logo: Optional logo URL
-        brand_color: Primary brand color (hex)
-    
-    Returns:
-        FastAPI router ready to mount
-    
-    Example:
-        >>> engine = MongloEngine(database=db, auto_discover=True)
-        >>> await engine.initialize()
-        >>> 
-        >>> app.include_router(create_ui_router(engine))
-        >>> # Visit http://localhost:8000/admin
-    """
     router = APIRouter(prefix=prefix, tags=["Monglo Admin UI"])
     
     # Setup Jinja2 templates with all filters
@@ -80,7 +35,6 @@ def create_ui_router(
     
     @router.get("/", response_class=HTMLResponse, name="admin_home")
     async def admin_home(request: Request):
-        """Admin home page with collection list."""
         collections = []
         
         for name, admin in engine.registry._collections.items():
@@ -110,20 +64,16 @@ def create_ui_router(
         search: Optional[str] = None,
         sort: Optional[str] = None
     ):
-        """Table view for a collection."""
         from ..views.table_view import TableView
         from ..operations.crud import CRUDOperations
         
-        # Get collection admin
         admin = engine.registry.get(collection)
         
-        # Parse sort
         sort_list = None
         if sort:
             field, direction = sort.split(":")
             sort_list = [(field, -1 if direction == "desc" else 1)]
         
-        # Get data
         crud = CRUDOperations(admin)
         data = await crud.list(
             page=page,
@@ -132,11 +82,9 @@ def create_ui_router(
             sort=sort_list
         )
         
-        # Get view config
         table_view_obj = TableView(admin)
         config = table_view_obj.render_config()
         
-        # Get all collections for sidebar
         collections = await _get_all_collections(engine)
         
         return templates.TemplateResponse("table_view.html", {
@@ -157,15 +105,12 @@ def create_ui_router(
         collection: str,
         id: str
     ):
-        """Document detail view."""
         from ..views.document_view import DocumentView
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
-        # Get collection admin
         admin = engine.registry.get(collection)
         
-        # Get document
         crud = CRUDOperations(admin)
         try:
             document = await crud.get(id)
@@ -177,11 +122,9 @@ def create_ui_router(
         serializer = JSONSerializer()
         serialized_doc = serializer._serialize_value(document)
         
-        # Get view config
         doc_view = DocumentView(admin)
         config = doc_view.render_config()
         
-        # Get all collections for sidebar
         collections = await _get_all_collections(engine)
         
         return templates.TemplateResponse("document_view.html", {
@@ -201,7 +144,6 @@ def create_ui_router(
     
     @router.delete("/{collection}/{id}", name="delete_document")
     async def delete_document(collection: str, id: str):
-        """Delete a document."""
         from ..operations.crud import CRUDOperations
         
         admin = engine.registry.get(collection)
@@ -212,7 +154,6 @@ def create_ui_router(
     
     @router.put("/{collection}/{id}", name="update_document")
     async def update_document(collection: str, id: str, data: dict):
-        """Update a document."""
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
@@ -229,7 +170,6 @@ def create_ui_router(
     
     @router.post("/{collection}", name="create_document")
     async def create_document(collection: str, data: dict):
-        """Create a new document."""
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
         
@@ -246,18 +186,10 @@ def create_ui_router(
     
     return router
 
-
 def _setup_templates() -> Jinja2Templates:
-    """
-    Setup Jinja2 templates with all necessary filters and globals.
-    
-    Developers never need to touch this - it's all automatic.
-    """
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
     
-    # Add datetime formatter filter
     def format_datetime(value):
-        """Format datetime for display."""
         if value is None:
             return ""
         from datetime import datetime
@@ -265,9 +197,7 @@ def _setup_templates() -> Jinja2Templates:
             return value.strftime("%Y-%m-%d %H:%M:%S")
         return str(value)
     
-    # Add type class filter (for CSS styling)
     def type_class(value):
-        """Get CSS class for value type."""
         if isinstance(value, str):
             return "string"
         elif isinstance(value, (int, float)):
@@ -280,14 +210,11 @@ def _setup_templates() -> Jinja2Templates:
             return "array"
         return ""
     
-    # Add truncate filter
     def truncate(s, length=50):
-        """Truncate string to length."""
         if not isinstance(s, str):
             s = str(s)
         return s[:length] + '...' if len(s) > length else s
     
-    # Register all filters
     templates.env.filters['format_datetime'] = format_datetime
     templates.env.filters['type_class'] = type_class
     templates.env.filters['str'] = str
@@ -295,13 +222,7 @@ def _setup_templates() -> Jinja2Templates:
     
     return templates
 
-
 async def _get_all_collections(engine: MongloEngine) -> list[dict[str, Any]]:
-    """
-    Get all collections with counts for sidebar.
-    
-    Internal helper - developers never call this.
-    """
     collections = []
     for name, admin in engine.registry._collections.items():
         count = await admin.collection.count_documents({})

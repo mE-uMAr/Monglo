@@ -1,8 +1,3 @@
-"""
-Integration tests for FastAPI adapter.
-
-Tests the complete FastAPI integration.
-"""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,10 +7,8 @@ from monglo import MongloEngine
 from monglo.adapters.fastapi import create_fastapi_router
 from monglo.ui_helpers.fastapi import create_ui_router
 
-
 @pytest.fixture
 async def fastapi_app(test_db):
-    """Create FastAPI app with Monglo."""
     from fastapi import FastAPI
     
     app = FastAPI()
@@ -37,13 +30,10 @@ async def fastapi_app(test_db):
     
     return app
 
-
 @pytest.mark.integration
 class TestFastAPIAdapter:
-    """Test FastAPI adapter integration."""
     
     def test_list_collections(self, fastapi_app):
-        """Test listing collections endpoint."""
         client = TestClient(fastapi_app)
         response = client.get("/api/admin/")
         
@@ -53,7 +43,6 @@ class TestFastAPIAdapter:
         assert len(data["collections"]) > 0
     
     async def test_create_document(self, fastapi_app, test_db):
-        """Test creating a document via API."""
         client = TestClient(fastapi_app)
         
         doc_data = {

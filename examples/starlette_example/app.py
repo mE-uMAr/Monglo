@@ -1,8 +1,3 @@
-"""
-MINIMAL Starlette Example - Library does all the work!
-
-Developers write ~10 lines and get a full admin interface.
-"""
 
 from starlette.applications import Starlette
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -19,9 +14,7 @@ db = client.monglo_demo
 # 2. Initialize Monglo
 engine = MongloEngine(database=db, auto_discover=True)
 
-
 async def startup():
-    """Initialize Monglo."""
     await engine.initialize()
     
     print("\n" + "="*60)
@@ -30,7 +23,6 @@ async def startup():
     print(f"📊 Discovered {len(engine.registry._collections)} collections")
     print(f"📡 API:      http://localhost:8000/api/admin")
     print("="*60 + "\n")
-
 
 # 3. Create Starlette app with auto-generated routes
 app = Starlette(

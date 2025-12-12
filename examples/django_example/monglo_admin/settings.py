@@ -1,11 +1,6 @@
-"""
-Django settings for monglo_admin project.
-Minimal configuration for Monglo demo.
-"""
 
 from pathlib import Path
 
-# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security (for demo only!)

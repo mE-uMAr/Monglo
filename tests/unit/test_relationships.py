@@ -1,8 +1,3 @@
-"""
-Unit tests for the relationship detection and resolution system.
-
-Tests relationship models, detection strategies, and resolution logic.
-"""
 
 import pytest
 from bson import ObjectId, DBRef
@@ -15,19 +10,15 @@ from monglo.core.relationships import (
 )
 from monglo.core.config import CollectionConfig
 
-
 class TestRelationshipType:
-    """Test RelationshipType enum."""
 
     def test_enum_values(self):
-        """Test that all enum values are correct."""
         assert RelationshipType.ONE_TO_ONE.value == "one_to_one"
         assert RelationshipType.ONE_TO_MANY.value == "one_to_many"
         assert RelationshipType.MANY_TO_MANY.value == "many_to_many"
         assert RelationshipType.EMBEDDED.value == "embedded"
 
     def test_enum_comparison(self):
-        """Test enum comparison."""
         rel1 = RelationshipType.ONE_TO_ONE
         rel2 = RelationshipType.ONE_TO_ONE
         rel3 = RelationshipType.ONE_TO_MANY
@@ -35,12 +26,9 @@ class TestRelationshipType:
         assert rel1 == rel2
         assert rel1 != rel3
 
-
 class TestRelationship:
-    """Test Relationship dataclass."""
 
     def test_creation(self):
-        """Test relationship creation."""
         rel = Relationship(
             source_collection="orders",
             source_field="user_id",
@@ -57,7 +45,6 @@ class TestRelationship:
         assert rel.reverse_name is None
 
     def test_defaults(self):
-        """Test default values."""
         rel = Relationship(
             source_collection="orders", source_field="user_id", target_collection="users"
         )
@@ -66,7 +53,6 @@ class TestRelationship:
         assert rel.type == RelationshipType.ONE_TO_ONE  # Default
 
     def test_with_reverse_name(self):
-        """Test bidirectional relationship."""
         rel = Relationship(
             source_collection="orders",
             source_field="user_id",
@@ -77,7 +63,6 @@ class TestRelationship:
         assert rel.reverse_name == "orders"
 
     def test_equality(self):
-        """Test relationship equality."""
         rel1 = Relationship(
             source_collection="orders", source_field="user_id", target_collection="users"
         )
@@ -92,7 +77,6 @@ class TestRelationship:
         assert rel1 != rel3
 
     def test_hashable(self):
-        """Test that relationships can be used in sets/dicts."""
         rel1 = Relationship(
             source_collection="orders", source_field="user_id", target_collection="users"
         )
@@ -108,13 +92,10 @@ class TestRelationship:
         rel_dict = {rel1: "value"}
         assert rel_dict[rel2] == "value"
 
-
 class TestRelationshipDetector:
-    """Test RelationshipDetector class."""
 
     @pytest.fixture
     def mock_db(self, mocker):
-        """Create a mock database."""
         db = mocker.AsyncMock()
         db.list_collection_names = mocker.AsyncMock(
             return_value=["users", "orders", "products", "categories"]
@@ -123,18 +104,15 @@ class TestRelationshipDetector:
 
     @pytest.fixture
     def detector(self, mock_db):
-        """Create a RelationshipDetector instance."""
         return RelationshipDetector(mock_db)
 
     @pytest.mark.asyncio
     async def test_initialization(self, detector, mock_db):
-        """Test detector initialization."""
         assert detector.db is mock_db
         assert detector._collection_cache == set()
 
     @pytest.mark.asyncio
     async def test_detect_naming_convention_single(self, detector, mock_db, mocker):
-        """Test detection of user_id → users relationship."""
         # Mock collection find
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
@@ -154,7 +132,6 @@ class TestRelationshipDetector:
 
     @pytest.mark.asyncio
     async def test_detect_naming_convention_plural(self, detector, mock_db, mocker):
-        """Test detection of product_ids → products relationship."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -175,7 +152,6 @@ class TestRelationshipDetector:
 
     @pytest.mark.asyncio
     async def test_detect_objectid_field(self, detector, mock_db, mocker):
-        """Test detection of ObjectId fields without _id suffix."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -183,7 +159,6 @@ class TestRelationshipDetector:
         )
         mock_db.__getitem__ = mocker.MagicMock(return_value=mock_collection)
 
-        # Add "authors" to collection cache
         detector._collection_cache = {"users", "orders", "products", "authors"}
 
         config = CollectionConfig()
@@ -196,7 +171,6 @@ class TestRelationshipDetector:
 
     @pytest.mark.asyncio
     async def test_detect_dbref(self, detector, mock_db, mocker):
-        """Test detection of DBRef references."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -215,7 +189,6 @@ class TestRelationshipDetector:
 
     @pytest.mark.asyncio
     async def test_detect_empty_collection(self, detector, mock_db, mocker):
-        """Test detection on empty collection."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -230,7 +203,6 @@ class TestRelationshipDetector:
 
     @pytest.mark.asyncio
     async def test_detect_with_manual_relationships(self, detector, mock_db, mocker):
-        """Test that manual relationships are preserved."""
         mock_collection = mocker.AsyncMock()
         mock_collection.find = mocker.MagicMock()
         mock_collection.find.return_value.limit.return_value.to_list = mocker.AsyncMock(
@@ -251,37 +223,30 @@ class TestRelationshipDetector:
         assert manual_rel in relationships
 
     def test_guess_collection_from_field(self, detector):
-        """Test collection name guessing from field names."""
         assert detector._guess_collection_from_field("user_id") == "users"
         assert detector._guess_collection_from_field("author_id") == "authors"
         assert detector._guess_collection_from_field("category_ids") == "categories"
         assert detector._guess_collection_from_field("product_ids") == "products"
 
     def test_pluralize(self, detector):
-        """Test pluralization logic."""
         assert detector._pluralize("user") == "users"
         assert detector._pluralize("author") == "authors"
         assert detector._pluralize("category") == "categories"
         assert detector._pluralize("class") == "classes"
         assert detector._pluralize("box") == "boxes"
 
-
 class TestRelationshipResolver:
-    """Test RelationshipResolver class."""
 
     @pytest.fixture
     def mock_db(self, mocker):
-        """Create a mock database."""
         return mocker.AsyncMock()
 
     @pytest.fixture
     def resolver(self, mock_db):
-        """Create a RelationshipResolver instance."""
         return RelationshipResolver(mock_db)
 
     @pytest.mark.asyncio
     async def test_resolve_one_to_one(self, resolver, mock_db, mocker):
-        """Test resolving one-to-one relationship."""
         user_id = ObjectId()
         user_doc = {"_id": user_id, "name": "Alice", "email": "alice@example.com"}
 
@@ -306,7 +271,6 @@ class TestRelationshipResolver:
 
     @pytest.mark.asyncio
     async def test_resolve_one_to_many(self, resolver, mock_db, mocker):
-        """Test resolving one-to-many relationship."""
         product_ids = [ObjectId(), ObjectId()]
         product_docs = [
             {"_id": product_ids[0], "name": "Product A"},
@@ -336,7 +300,6 @@ class TestRelationshipResolver:
 
     @pytest.mark.asyncio
     async def test_resolve_missing_field(self, resolver, mock_db):
-        """Test resolving when field is missing from document."""
         document = {"_id": ObjectId(), "total": 100}
         relationship = Relationship(
             source_collection="orders", source_field="user_id", target_collection="users"
@@ -350,7 +313,6 @@ class TestRelationshipResolver:
 
     @pytest.mark.asyncio
     async def test_resolve_depth_zero(self, resolver, mock_db):
-        """Test that depth=0 returns document unchanged."""
         document = {"_id": ObjectId(), "user_id": ObjectId()}
         relationship = Relationship(
             source_collection="orders", source_field="user_id", target_collection="users"
@@ -363,7 +325,6 @@ class TestRelationshipResolver:
 
     @pytest.mark.asyncio
     async def test_resolve_batch(self, resolver, mock_db, mocker):
-        """Test batch resolution for multiple documents."""
         user_ids = [ObjectId(), ObjectId()]
         user_docs = [{"_id": user_ids[0], "name": "Alice"}, {"_id": user_ids[1], "name": "Bob"}]
 
@@ -389,6 +350,5 @@ class TestRelationshipResolver:
 
     @pytest.mark.asyncio
     async def test_resolve_batch_empty(self, resolver, mock_db):
-        """Test batch resolution with empty list."""
         results = await resolver.resolve_batch([], [])
         assert results == []

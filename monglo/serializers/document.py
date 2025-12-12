@@ -1,8 +1,3 @@
-"""
-Document serializer for preserving structure in detail views.
-
-Handles nested documents and relationships while maintaining tree structure.
-"""
 
 from __future__ import annotations
 
@@ -11,18 +6,7 @@ from typing import Any
 
 from bson import DBRef, ObjectId
 
-
 class DocumentSerializer:
-    """Serialize documents with full structure preservation.
-
-    Maintains nested document structure and includes type annotations
-    for UI widget selection.
-
-    Example:
-        >>> serializer = DocumentSerializer()
-        >>> result = serializer.serialize(document, schema=schema)
-        >>> # Returns document with type annotations
-    """
 
     def serialize(
         self,
@@ -31,16 +15,6 @@ class DocumentSerializer:
         schema: dict[str, Any] | None = None,
         include_types: bool = True,
     ) -> dict[str, Any]:
-        """Serialize document with optional type annotations.
-
-        Args:
-            document: Document to serialize
-            schema: Optional schema for type information
-            include_types: Whether to include type annotations
-
-        Returns:
-            Serialized document
-        """
         schema = schema or {}
 
         result = {}
@@ -62,14 +36,6 @@ class DocumentSerializer:
         return result
 
     def _serialize_value(self, value: Any) -> Any:
-        """Serialize a single value, preserving structure.
-
-        Args:
-            value: Value to serialize
-
-        Returns:
-            Serialized value
-        """
         if isinstance(value, ObjectId):
             return {"$oid": str(value)}
         elif isinstance(value, datetime):
