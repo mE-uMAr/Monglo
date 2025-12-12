@@ -4,38 +4,38 @@
  */
 
 class EditModal {
-    constructor() {
-        this.modal = null;
-        this.currentCollection = null;
-        this.currentDocumentId = null;
-        this.currentDocument = null;
+  constructor() {
+    this.modal = null;
+    this.currentCollection = null;
+    this.currentDocumentId = null;
+    this.currentDocument = null;
+  }
+
+  async open(collection, documentId) {
+    this.currentCollection = collection;
+    this.currentDocumentId = documentId;
+
+    // Fetch document data
+    try {
+      const response = await fetch(`/api/admin/${collection}/${documentId}`);
+      const result = await response.json();
+      this.currentDocument = result.document || result;
+
+      this.createModal();
+      this.populateForm();
+    } catch (error) {
+      alert('Error loading document: ' + error.message);
     }
+  }
 
-    async open(collection, documentId) {
-        this.currentCollection = collection;
-        this.currentDocumentId = documentId;
+  createModal() {
+    // Remove existing modal if any
+    const existing = document.getElementById('edit-modal');
+    if (existing) existing.remove();
 
-        // Fetch document data
-        try {
-            const response = await fetch(`/api/admin/${collection}/${documentId}`);
-            const result = await response.json();
-            this.currentDocument = result.document || result;
-
-            this.createModal();
-            this.populateForm();
-        } catch (error) {
-            alert('Error loading document: ' + error.message);
-        }
-    }
-
-    createModal() {
-        // Remove existing modal if any
-        const existing = document.getElementById('edit-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'edit-modal';
-        modal.style.cssText = `
+    const modal = document.createElement('div');
+    modal.id = 'edit-modal';
+    modal.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
@@ -49,7 +49,7 @@ class EditModal {
       animation: fadeIn 0.2s ease-out;
     `;
 
-        modal.innerHTML = `
+    modal.innerHTML = `
       <div style="
         background: var(--bg-primary);
         border-radius: var(--radius-lg);
@@ -99,48 +99,55 @@ class EditModal {
       </div>
     `;
 
-        document.body.appendChild(modal);
-        this.modal = modal;
+    document.body.appendChild(modal);
+    this.modal = modal;
 
-        // Close on backdrop click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) this.close();
-        });
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) this.close();
+    });
+  }
+
+  populateForm() {
+    const container = document.getElementById('edit-form-container');
+    if (!container || !this.currentDocument) return;
+
+    let formHtml = '';
+
+    // Generate fields for each property except _id
+    for (const [key, value] of Object.entries(this.currentDocument)) {
+      if (key === '_id') continue; // Skip _id (read-only)
+
+      const fieldType = this.detectFieldType(value);
+      formHtml += this.generateField(key, value, fieldType);
     }
 
-    populateForm() {
-        const container = document.getElementById('edit-form-container');
-        if (!container || !this.currentDocument) return;
+    container.innerHTML = formHtml;
+  }
 
-        let formHtml = '';
+  detectFieldType(value) {
+    if (value === null) return 'text';
+    if (typeof value === 'boolean') return 'checkbox';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'object') return 'json';
+    if (typeof value === 'string' && value.includes('T') && !isNaN(Date.parse(value))) {
+      return 'datetime-local';
+    }
+    return 'text';
+  }
 
-        // Generate fields for each property except _id
-        for (const [key, value] of Object.entries(this.currentDocument)) {
-            if (key === '_id') continue; // Skip _id (read-only)
+  generateField(key, value, type) {
+    let displayValue = type === 'json' ? JSON.stringify(value, null, 2) : value;
 
-            const fieldType = this.detectFieldType(value);
-            formHtml += this.generateField(key, value, fieldType);
-        }
-
-        container.innerHTML = formHtml;
+    // Format datetime for datetime-local input (requires YYYY-MM-DDTHH:mm format)
+    if (type === 'datetime-local' && displayValue) {
+      // Convert ISO string (2025-12-13T00:19:34.272000) to datetime-local format (2025-12-13T00:19)
+      displayValue = displayValue.substring(0, 16);
     }
 
-    detectFieldType(value) {
-        if (value === null) return 'text';
-        if (typeof value === 'boolean') return 'checkbox';
-        if (typeof value === 'number') return 'number';
-        if (typeof value === 'object') return 'json';
-        if (typeof value === 'string' && value.includes('T') && !isNaN(Date.parse(value))) {
-            return 'datetime-local';
-        }
-        return 'text';
-    }
+    const checked = type === 'checkbox' && value ? 'checked' : '';
 
-    generateField(key, value, type) {
-        const displayValue = type === 'json' ? JSON.stringify(value, null, 2) : value;
-        const checked = type === 'checkbox' && value ? 'checked' : '';
-
-        return `
+    return `
       <div style="margin-bottom: var(--spacing-lg);">
         <label style="
           display: block;
@@ -175,59 +182,59 @@ class EditModal {
         `}
       </div>
     `;
-    }
+  }
 
-    async save() {
-        const container = document.getElementById('edit-form-container');
-        if (!container) return;
+  async save() {
+    const container = document.getElementById('edit-form-container');
+    if (!container) return;
 
-        // Collect form data
-        const formData = {};
-        const inputs = container.querySelectorAll('input, textarea');
+    // Collect form data
+    const formData = {};
+    const inputs = container.querySelectorAll('input, textarea');
 
-        inputs.forEach(input => {
-            const key = input.name;
-            let value = input.type === 'checkbox' ? input.checked : input.value;
+    inputs.forEach(input => {
+      const key = input.name;
+      let value = input.type === 'checkbox' ? input.checked : input.value;
 
-            // Try to parse JSON fields
-            if (input.tagName === 'TEXTAREA') {
-                try {
-                    value = JSON.parse(value);
-                } catch (e) {
-                    // Keep as string if not valid JSON
-                }
-            } else if (input.type === 'number') {
-                value = parseFloat(value);
-            }
-
-            formData[key] = value;
-        });
-
-        // Update document
+      // Try to parse JSON fields
+      if (input.tagName === 'TEXTAREA') {
         try {
-            const response = await fetch(`/api/admin/${this.currentCollection}/${this.currentDocumentId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                this.close();
-                window.location.reload(); // Reload to show changes
-            } else {
-                alert('Error updating document');
-            }
-        } catch (error) {
-            alert('Error: ' + error.message);
+          value = JSON.parse(value);
+        } catch (e) {
+          // Keep as string if not valid JSON
         }
-    }
+      } else if (input.type === 'number') {
+        value = parseFloat(value);
+      }
 
-    close() {
-        if (this.modal) {
-            this.modal.remove();
-            this.modal = null;
-        }
+      formData[key] = value;
+    });
+
+    // Update document
+    try {
+      const response = await fetch(`/api/admin/${this.currentCollection}/${this.currentDocumentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        this.close();
+        window.location.reload(); // Reload to show changes
+      } else {
+        alert('Error updating document');
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
     }
+  }
+
+  close() {
+    if (this.modal) {
+      this.modal.remove();
+      this.modal = null;
+    }
+  }
 }
 
 // Global instance
@@ -235,6 +242,6 @@ window.editModal = new EditModal();
 
 // Global function to open edit modal
 window.editDocument = function (id) {
-    const collection = window.location.pathname.split('/')[2];
-    window.editModal.open(collection, id);
+  const collection = window.location.pathname.split('/')[2];
+  window.editModal.open(collection, id);
 };

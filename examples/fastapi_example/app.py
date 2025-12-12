@@ -283,9 +283,10 @@ async def document_view(request: Request, collection: str, id: str):
         # Document not found - redirect back to collection
         return RedirectResponse(url=f"/admin/{collection}", status_code=302)
     
-    # Serialize document to make it JSON-safe
+    # Serialize document to make it template-safe (dict with strings, not ObjectId)
     serializer = JSONSerializer()
-    serialized_doc = serializer.serialize(document)
+    # Use _serialize_value to get dict, not JSON string
+    serialized_doc = serializer._serialize_value(document)
     
     # Get view config
     doc_view = DocumentView(admin)
@@ -327,24 +328,36 @@ async def delete_document(collection: str, id: str):
 async def update_document(collection: str, id: str, data: dict):
     """Update a document."""
     from monglo.operations.crud import CRUDOperations
+    from monglo.serializers.json import JSONSerializer
     
     admin = engine.registry.get(collection)
     crud = CRUDOperations(admin)
     
     updated = await crud.update(id, data)
-    return {"success": True, "document": updated}
+    
+    # Serialize ObjectId to dict for JSON response (not JSON string)
+    serializer = JSONSerializer()
+    serialized = serializer._serialize_value(updated)
+    
+    return {"success": True, "document": serialized}
 
 
 @app.post("/api/admin/{collection}")
 async def create_document(collection: str, data: dict):
     """Create a new document."""
     from monglo.operations.crud import CRUDOperations
+    from monglo.serializers.json import JSONSerializer
     
     admin = engine.registry.get(collection)
     crud = CRUDOperations(admin)
     
     created = await crud.create(data)
-    return {"success": True, "document": created}
+    
+    # Serialize ObjectId to dict for JSON response (not JSON string)
+    serializer = JSONSerializer()
+    serialized = serializer._serialize_value(created)
+    
+    return {"success": True, "document": serialized}
 
 
 @app.get("/health")
