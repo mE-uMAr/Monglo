@@ -36,12 +36,8 @@ jobs:
         env:
           MONGODB_TEST_URI: mongodb://localhost:27017
       
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        if: github.ref == 'refs/heads/main'
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
         with:
-          name: Python Benchmark
-          tool: 'pytest'
-          output-file-path: benchmark-results.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
+          name: benchmark-results
+          path: benchmark-results.json
