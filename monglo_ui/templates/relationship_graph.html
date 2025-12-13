@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Relationships - {{ collection.name }} - Monglo Admin{% endblock %}
+{% block title %}Relationships - Monglo Admin{% endblock %}
 
 {% block header_actions %}
 <button class="monglo-btn monglo-btn-secondary" onclick="window.history.back()">
@@ -18,45 +18,51 @@
 {% block content %}
 <div class="monglo-fade-in">
     <!-- Graph Container -->
-    <div id="relationship-graph" style="min-height: 600px;"></div>
+    <div id="relationship-graph"
+        style="min-height: 600px; background: var(--card-bg); border-radius: var(--radius-lg); padding: var(--spacing-lg); box-shadow: var(--shadow-sm);">
+    </div>
 
     <!-- Legend -->
     <div
-        style="margin-top: var(--spacing-xl); background: white; padding: var(--spacing-lg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
-        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-md);">Relationship Types</h3>
+        style="margin-top: var(--spacing-xl); background: var(--card-bg); padding: var(--spacing-lg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-md); color: var(--text-primary);">
+            Relationship Types</h3>
         <div
             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
             <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
                 <div style="width: 20px; height: 3px; background: #10b981;"></div>
-                <span>One-to-One</span>
+                <span style="color: var(--text-primary);">One-to-One</span>
             </div>
             <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
                 <div style="width: 20px; height: 3px; background: #3b82f6;"></div>
-                <span>One-to-Many</span>
+                <span style="color: var(--text-primary);">One-to-Many</span>
             </div>
             <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
                 <div style="width: 20px; height: 3px; background: #f59e0b;"></div>
-                <span>Many-to-Many</span>
+                <span style="color: var(--text-primary);">Many-to-Many</span>
             </div>
             <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
                 <div style="width: 20px; height: 3px; background: #8b5cf6;"></div>
-                <span>Embedded</span>
+                <span style="color: var(--text-primary);">Embedded</span>
             </div>
         </div>
     </div>
 
     <!-- Relationship List -->
     <div
-        style="margin-top: var(--spacing-xl); background: white; padding: var(--spacing-lg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
-        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-md);">All Relationships</h3>
+        style="margin-top: var(--spacing-xl); background: var(--card-bg); padding: var(--spacing-lg); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--spacing-md); color: var(--text-primary);">All
+            Relationships ({{ relationships|length }})</h3>
+        {% if relationships %}
         <div style="display: grid; gap: var(--spacing-md);">
             {% for rel in relationships %}
             <div
-                style="padding: var(--spacing-md); border: 1px solid var(--gray-200); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center;">
+                style="padding: var(--spacing-md); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; background: var(--input-bg);">
                 <div>
-                    <div style="font-weight: 600;">{{ rel.source_collection }}.{{ rel.source_field }}</div>
-                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-top: var(--spacing-xs);">
-                        → {{ rel.target_collection }}.{{ rel.target_field }}
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ rel.source_collection }}.{{
+                        rel.source_field }}</div>
+                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                        → {{ rel.target_collection }}
                     </div>
                 </div>
                 <span
@@ -66,16 +72,25 @@
             </div>
             {% endfor %}
         </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">
+            <i class="fas fa-project-diagram"
+                style="font-size: 3rem; opacity: 0.3; margin-bottom: var(--spacing-md);"></i>
+            <p>No relationships detected yet.</p>
+            <p style="font-size: 0.875rem; margin-top: var(--spacing-sm);">Relationships are auto-detected from your
+                data structure.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<script src="/admin/static/js/relationship-graph.js"></script>
+<script src="{{ prefix }}/static/js/relationship-graph.js"></script>
 <script>
     // Initialize graph
     const graphData = {
         collections: {{ collections| tojson }},
-    relationships: { { relationships | tojson } }
-};
+    relationships: {{ relationships | tojson }}
+    };
 
     const graph = new MongloRelationshipGraph('relationship-graph', graphData);
 

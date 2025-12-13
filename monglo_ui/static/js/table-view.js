@@ -37,7 +37,7 @@ class MongloTableView {
                 if (!e.target.matches('input[type="checkbox"]') &&
                     !e.target.matches('button')) {
                     const id = row.dataset.id;
-                    window.location.href = `/admin/${this.collection}/document/${id}`;
+                    window.location.href = `${window.MONGLO_PREFIX}/${this.collection}/document/${id}`;
                 }
             });
         });
@@ -122,7 +122,7 @@ class MongloTableView {
 
         try {
             const promises = Array.from(this.selectedRows).map(id =>
-                fetch(`/admin/${this.collection}/${id}`, { method: 'DELETE' })
+                fetch(`${window.MONGLO_PREFIX}/${this.collection}/${id}`, { method: 'DELETE' })
             );
 
             await Promise.all(promises);
@@ -184,13 +184,11 @@ document.head.appendChild(style);
 window.MongloTableView = MongloTableView;
 
 // Global delete function
-window.deleteDocument = async function (id) {
+window.deleteDocument = async function (collection, id) {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
-    const collection = window.location.pathname.split('/')[2];
-
     try {
-        const response = await fetch(`/admin/${collection}/${id}`, {
+        const response = await fetch(`${window.MONGLO_PREFIX}/${collection}/${id}`, {
             method: 'DELETE'
         });
 

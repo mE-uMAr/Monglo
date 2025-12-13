@@ -17,7 +17,7 @@
             </thead>
             <tbody>
                 {% for collection in collections %}
-                <tr onclick="window.location.href='/admin/{{ collection.name }}'" style="cursor: pointer;">
+                <tr onclick="window.location.href='{{ prefix }}/{{ collection.name }}'" style="cursor: pointer;">
                     <td style="text-align: center;">
                         <div style="
                             width: 40px; 
@@ -56,7 +56,8 @@
                         </span>
                     </td>
                     <td style="text-align: right;">
-                        <button onclick="event.stopPropagation(); window.location.href='/admin/{{ collection.name }}'"
+                        <button
+                            onclick="event.stopPropagation(); window.location.href='{{ prefix }}/{{ collection.name }}'"
                             class="monglo-btn monglo-btn-primary monglo-btn-sm" title="View Collection">
                             <i class="fas fa-arrow-right"></i>
                         </button>

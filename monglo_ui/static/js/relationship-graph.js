@@ -1,97 +1,71 @@
-// Monglo Relationship Graph - D3.js visualization
+// Monglo Relationship Graph - UML/ER Diagram Style
 
 class MongloRelationshipGraph {
     constructor(containerId, data) {
         this.container = document.getElementById(containerId);
         this.data = data;
-        this.width = this.container.offsetWidth;
+        this.width = this.container.offsetWidth || 1200;
         this.height = 600;
 
+        // Dark mode detection
         this.init();
     }
 
     init() {
+        // Detect dark mode with multiple checks
+        this.updateDarkMode();
+
         // Create SVG
         this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         this.svg.setAttribute('width', this.width);
         this.svg.setAttribute('height', this.height);
-        this.svg.style.background = '#fff';
-        this.svg.style.borderRadius = 'var(--radius-lg)';
-        this.svg.style.boxShadow = 'var(--shadow-sm)';
+        this.updateSVGBackground();
 
         this.container.appendChild(this.svg);
 
         this.render();
     }
 
-    render() {
-        const { nodes, links } = this.prepareData();
+    updateDarkMode() {
+        // Check body class first
+        this.isDarkMode = document.body.classList.contains('dark-mode');
 
-        // Simple force-directed layout (without D3.js dependency)
-        this.renderWithSimpleLayout(nodes, links);
-    }
-
-    prepareData() {
-        const nodes = [];
-        const links = [];
-        const nodeMap = new Map();
-
-        // Create nodes from collections
-        this.data.collections.forEach((collection, index) => {
-            const node = {
-                id: collection.name,
-                label: collection.display_name || collection.name,
-                x: (this.width / (this.data.collections.length + 1)) * (index + 1),
-                y: this.height / 2,
-                vx: 0,
-                vy: 0
-            };
-            nodes.push(node);
-            nodeMap.set(collection.name, node);
-        });
-
-        // Create links from relationships
-        this.data.relationships.forEach(rel => {
-            const source = nodeMap.get(rel.source_collection);
-            const target = nodeMap.get(rel.target_collection);
-
-            if (source && target) {
-                links.push({
-                    source: source,
-                    target: target,
-                    type: rel.type,
-                    field: rel.source_field
-                });
-            }
-        });
-
-        return { nodes, links };
-    }
-
-    renderWithSimpleLayout(nodes, links) {
-        // Simple force simulation
-        const iterations = 100;
-        for (let i = 0; i < iterations; i++) {
-            this.applyForces(nodes, links);
+        // Fallback to localStorage if body class not set yet
+        if (!this.isDarkMode) {
+            const savedMode = localStorage.getItem('monglo-dark-mode');
+            this.isDarkMode = savedMode === 'dark';
         }
+    }
 
-        // Render links
-        links.forEach(link => {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', link.source.x);
-            line.setAttribute('y1', link.source.y);
-            line.setAttribute('x2', link.target.x);
-            line.setAttribute('y2', link.target.y);
-            line.setAttribute('stroke', '#d1d5db');
-            line.setAttribute('stroke-width', '2');
-            line.setAttribute('marker-end', 'url(#arrowhead)');
+    updateSVGBackground() {
+        this.svg.style.background = this.isDarkMode ? '#1a1a1a' : '#f9fafb';
+        this.svg.style.borderRadius = 'var(--radius-lg)';
+        this.svg.style.boxShadow = 'var(--shadow-sm)';
+    }
 
-            // Tooltip
-            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            title.textContent = `${link.field} (${link.type})`;
-            line.appendChild(title);
+    render() {
+        const collections = this.data.collections;
+        const relationships = this.data.relationships;
 
-            this.svg.appendChild(line);
+        // Calculate layout
+        const boxWidth = 220;
+        const boxHeight = 150;
+        const cols = Math.min(3, collections.length);
+        const rows = Math.ceil(collections.length / cols);
+
+        const horizontalSpacing = (this.width - (cols * boxWidth)) / (cols + 1);
+        const verticalSpacing = (this.height - (rows * boxHeight)) / (rows + 1);
+
+        // Position collections
+        const positions = new Map();
+        collections.forEach((collection, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+
+            const x = horizontalSpacing + col * (boxWidth + horizontalSpacing);
+            const y = verticalSpacing + row * (boxHeight + verticalSpacing);
+
+            positions.set(collection.name, { x, y, width: boxWidth, height: boxHeight });
         });
 
         // Add arrowhead marker
@@ -100,109 +74,185 @@ class MongloRelationshipGraph {
         marker.setAttribute('id', 'arrowhead');
         marker.setAttribute('markerWidth', '10');
         marker.setAttribute('markerHeight', '10');
-        marker.setAttribute('refX', '25');
+        marker.setAttribute('refX', '9');
         marker.setAttribute('refY', '3');
         marker.setAttribute('orient', 'auto');
 
         const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         polygon.setAttribute('points', '0 0, 6 3, 0 6');
-        polygon.setAttribute('fill', '#d1d5db');
+        polygon.setAttribute('fill', this.isDarkMode ? '#10b981' : '#10b981');
         marker.appendChild(polygon);
         defs.appendChild(marker);
-        this.svg.insertBefore(defs, this.svg.firstChild);
+        this.svg.appendChild(defs);
 
-        // Render nodes
-        nodes.forEach(node => {
-            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            group.setAttribute('transform', `translate(${node.x}, ${node.y})`);
-            group.style.cursor = 'pointer';
+        // Draw relationships (lines) first so they appear behind boxes
+        relationships.forEach(rel => {
+            const source = positions.get(rel.source_collection);
+            const target = positions.get(rel.target_collection);
 
-            // Circle
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('r', '30');
-            circle.setAttribute('fill', '#2563eb');
-            circle.setAttribute('stroke', '#fff');
-            circle.setAttribute('stroke-width', '3');
+            if (source && target) {
+                this.drawRelationship(source, target, rel);
+            }
+        });
 
-            // Hover effect
-            group.addEventListener('mouseenter', () => {
-                circle.setAttribute('r', '35');
-                circle.setAttribute('fill', '#1d4ed8');
-            });
-            group.addEventListener('mouseleave', () => {
-                circle.setAttribute('r', '30');
-                circle.setAttribute('fill', '#2563eb');
-            });
-
-            // Click to navigate
-            group.addEventListener('click', () => {
-                window.location.href = `/admin/${node.id}`;
-            });
-
-            group.appendChild(circle);
-
-            // Label
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('dy', '50');
-            text.setAttribute('fill', '#374151');
-            text.setAttribute('font-weight', '600');
-            text.setAttribute('font-size', '14');
-            text.textContent = node.label;
-
-            group.appendChild(text);
-            this.svg.appendChild(group);
+        // Draw collection boxes
+        collections.forEach(collection => {
+            const pos = positions.get(collection.name);
+            if (pos) {
+                this.drawCollectionBox(collection, pos);
+            }
         });
     }
 
-    applyForces(nodes, links) {
-        const repulsion = 5000;
-        const attraction = 0.01;
-        const damping = 0.8;
+    drawRelationship(source, target, rel) {
+        // Calculate connection points (center of boxes)
+        const x1 = source.x + source.width / 2;
+        const y1 = source.y + source.height / 2;
+        const x2 = target.x + target.width / 2;
+        const y2 = target.y + target.height / 2;
 
-        // Repulsion between nodes
-        for (let i = 0; i < nodes.length; i++) {
-            for (let j = i + 1; j < nodes.length; j++) {
-                const dx = nodes[j].x - nodes[i].x;
-                const dy = nodes[j].y - nodes[i].y;
-                const distSq = dx * dx + dy * dy + 0.01; // Avoid division by zero
-                const force = repulsion / distSq;
+        // Calculate edge intersection points
+        const sourceEdge = this.getBoxEdgePoint(source, x2, y2);
+        const targetEdge = this.getBoxEdgePoint(target, x1, y1);
 
-                const fx = (dx / Math.sqrt(distSq)) * force;
-                const fy = (dy / Math.sqrt(distSq)) * force;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', sourceEdge.x);
+        line.setAttribute('y1', sourceEdge.y);
+        line.setAttribute('x2', targetEdge.x);
+        line.setAttribute('y2', targetEdge.y);
 
-                nodes[i].vx -= fx;
-                nodes[i].vy -= fy;
-                nodes[j].vx += fx;
-                nodes[j].vy += fy;
-            }
+
+        // Color based on relationship type
+        let color;
+        if (rel.type === 'one_to_one') {
+            color = this.isDarkMode ? '#10b981' : '#059669';  // Green
+        } else if (rel.type === 'one_to_many') {
+            color = this.isDarkMode ? '#60a5fa' : '#3b82f6';  // Blue
+        } else if (rel.type === 'many_to_many') {
+            color = this.isDarkMode ? '#fbbf24' : '#f59e0b';  // Orange
+        } else if (rel.type === 'embedded') {
+            color = this.isDarkMode ? '#a78bfa' : '#8b5cf6';  // Purple
+        } else {
+            color = this.isDarkMode ? '#9ca3af' : '#6b7280';  // Gray default
         }
 
-        // Attraction along links
-        links.forEach(link => {
-            const dx = link.target.x - link.source.x;
-            const dy = link.target.y - link.source.y;
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('marker-end', 'url(#arrowhead)');
 
-            link.source.vx += dx * attraction;
-            link.source.vy += dy * attraction;
-            link.target.vx -= dx * attraction;
-            link.target.vy -= dy * attraction;
+        // Tooltip
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = `${rel.source_field} → ${rel.target_collection} (${rel.type})`;
+        line.appendChild(title);
+
+        this.svg.appendChild(line);
+    }
+
+    getBoxEdgePoint(box, targetX, targetY) {
+        const centerX = box.x + box.width / 2;
+        const centerY = box.y + box.height / 2;
+
+        const dx = targetX - centerX;
+        const dy = targetY - centerY;
+
+        // Calculate intersection with box edges
+        let x, y;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Intersect left or right edge
+            x = dx > 0 ? box.x + box.width : box.x;
+            y = centerY + (dy / dx) * (x - centerX);
+        } else {
+            // Intersect top or bottom edge
+            y = dy > 0 ? box.y + box.height : box.y;
+            x = centerX + (dx / dy) * (y - centerY);
+        }
+
+        return { x, y };
+    }
+
+    drawCollectionBox(collection, pos) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.style.cursor = 'pointer';
+
+        // Main box
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', pos.x);
+        rect.setAttribute('y', pos.y);
+        rect.setAttribute('width', pos.width);
+        rect.setAttribute('height', pos.height);
+        rect.setAttribute('fill', this.isDarkMode ? '#2d2d2d' : '#ffffff');
+        rect.setAttribute('stroke', this.isDarkMode ? '#444' : '#e5e7eb');
+        rect.setAttribute('stroke-width', '2');
+        rect.setAttribute('rx', '8');
+
+        // Header section
+        const header = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        header.setAttribute('x', pos.x);
+        header.setAttribute('y', pos.y);
+        header.setAttribute('width', pos.width);
+        header.setAttribute('height', '35');
+        header.setAttribute('fill', this.isDarkMode ? '#10b981' : '#10b981');
+        header.setAttribute('rx', '8');
+
+        // Header text (collection name)
+        const headerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        headerText.setAttribute('x', pos.x + pos.width / 2);
+        headerText.setAttribute('y', pos.y + 22);
+        headerText.setAttribute('text-anchor', 'middle');
+        headerText.setAttribute('fill', '#ffffff');
+        headerText.setAttribute('font-weight', '600');
+        headerText.setAttribute('font-size', '14');
+        headerText.textContent = collection.display_name || collection.name;
+
+        // Field count text
+        const fieldCountText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        fieldCountText.setAttribute('x', pos.x + pos.width / 2);
+        fieldCountText.setAttribute('y', pos.y + 55);
+        fieldCountText.setAttribute('text-anchor', 'middle');
+        fieldCountText.setAttribute('fill', this.isDarkMode ? '#9ca3af' : '#6b7280');
+        fieldCountText.setAttribute('font-size', '12');
+        fieldCountText.textContent = `Documents: ${collection.count || 0}`;
+
+        // Relationship count
+        const relCountText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        relCountText.setAttribute('x', pos.x + pos.width / 2);
+        relCountText.setAttribute('y', pos.y + 75);
+        relCountText.setAttribute('text-anchor', 'middle');
+        relCountText.setAttribute('fill', this.isDarkMode ? '#9ca3af' : '#6b7280');
+        relCountText.setAttribute('font-size', '12');
+        relCountText.textContent = `Relationships: ${collection.relationships || 0}`;
+
+        // Icon
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        icon.setAttribute('x', pos.x + pos.width / 2);
+        icon.setAttribute('y', pos.y + 110);
+        icon.setAttribute('text-anchor', 'middle');
+        icon.setAttribute('font-size', '32');
+        icon.textContent = '📊';
+
+        // Hover effect
+        group.addEventListener('mouseenter', () => {
+            rect.setAttribute('stroke', this.isDarkMode ? '#10b981' : '#10b981');
+            rect.setAttribute('stroke-width', '3');
+        });
+        group.addEventListener('mouseleave', () => {
+            rect.setAttribute('stroke', this.isDarkMode ? '#444' : '#e5e7eb');
+            rect.setAttribute('stroke-width', '2');
         });
 
-        // Update positions
-        nodes.forEach(node => {
-            node.x += node.vx;
-            node.y += node.vy;
-
-            // Apply damping
-            node.vx *= damping;
-            node.vy *= damping;
-
-            // Keep within bounds
-            const margin = 50;
-            node.x = Math.max(margin, Math.min(this.width - margin, node.x));
-            node.y = Math.max(margin, Math.min(this.height - margin, node.y));
+        // Click to navigate
+        group.addEventListener('click', () => {
+            window.location.href = `${window.MONGLO_PREFIX}/${collection.name}`;
         });
+
+        group.appendChild(rect);
+        group.appendChild(header);
+        group.appendChild(headerText);
+        group.appendChild(fieldCountText);
+        group.appendChild(relCountText);
+        group.appendChild(icon);
+        this.svg.appendChild(group);
     }
 }
 

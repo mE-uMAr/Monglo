@@ -188,7 +188,7 @@ class MongloDocumentView {
         });
 
         try {
-            const response = await fetch(`/admin/${this.collection}/${this.documentId}`, {
+            const response = await fetch(`${window.MONGLO_PREFIX}/${this.collection}/${this.documentId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)

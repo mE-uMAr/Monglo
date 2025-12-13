@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Monglo Admin{% endblock %}</title>
 
+    <!-- CRITICAL: Apply dark mode BEFORE rendering to prevent flash -->
+    <script>
+        (function () {
+            const savedMode = localStorage.getItem('monglo-dark-mode');
+            if (savedMode === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+    </script>
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,8 +35,12 @@
         <aside class="monglo-sidebar">
             <div class="monglo-sidebar-header">
                 <div class="monglo-logo">
+                    {% if logo %}
+                    <img src="{{ logo }}" alt="{{ title }}" style="height: 24px; width: auto; margin-right: 8px;">
+                    {% else %}
                     <i class="fas fa-database"></i>
-                    Monglo Admin
+                    {% endif %}
+                    {{ title|default('Monglo Admin') }}
                 </div>
             </div>
 
@@ -35,13 +49,19 @@
                     <i class="fas fa-layer-group"></i> Collections
                 </h3>
                 {% for collection in collections %}
-                <a href="/admin/{{ collection.name }}"
+                <a href="{{ prefix }}/{{ collection.name }}"
                     class="monglo-collection-item {% if current_collection == collection.name %}active{% endif %}">
                     <i class="fas fa-table"></i>
-                    <span>{{ collection.display_name or collection.name }}</span>
-                    <span class="monglo-collection-count">{{ collection.count }}</span>
+                    <span>{{ collection.display_name }}</span>
+                    <i class="fas fa-chevron-right"></i>
                 </a>
                 {% endfor %}
+
+                <a href="{{ prefix }}/relationships" class="monglo-collection-item">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Relationships</span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
             </nav>
         </aside>
 
