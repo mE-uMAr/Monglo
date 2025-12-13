@@ -8,6 +8,9 @@ from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
 
 if TYPE_CHECKING:
     from ..core.engine import MongloEngine
@@ -23,7 +26,7 @@ def setup_ui(
     title: str = "Monglo Admin",
     logo: str | None = None,
     brand_color: str = "#10b981",
-    auth_dependency: Any | None = None,  # NEW: Optional auth check
+    auth_backend: Any | None = None,  # NEW: AuthenticationBackend instance
 ) -> None:
     """
     Setup Monglo UI on a FastAPI application.
@@ -38,17 +41,48 @@ def setup_ui(
         title: Page title
         logo: Optional logo URL
         brand_color: Brand color in hex
-        auth_dependency: Optional callable for authentication
-                        Should raise HTTPException(401) if not authenticated
+        auth_backend: Optional AuthenticationBackend instance for authentication
+                     When provided, automatically sets up session middleware,
+                     login/logout routes, and protects admin routes
     """
-    from fastapi.staticfiles import StaticFiles
+    # Setup session middleware if auth is enabled
+    if auth_backend:
+        # Add session middleware for auth
+        app.add_middleware(SessionMiddleware, secret_key=auth_backend.secret_key)
+        
+        # Add 401 redirect middleware
+        app.add_middleware(AuthRedirectMiddleware, prefix=prefix)
     
     # Mount static files on the main app
     app.mount(f"{prefix}/static", StaticFiles(directory=str(STATIC_DIR)), name="admin_static")
     
     # Include the UI router
-    router = create_ui_router(engine, prefix, title, logo, brand_color, auth_dependency)
+    router = create_ui_router(engine, prefix, title, logo, brand_color, auth_backend)
     app.include_router(router)
+
+
+class AuthRedirectMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to redirect 401 errors to login page.
+    Only active when authentication is enabled.
+    """
+    
+    def __init__(self, app, prefix: str = "/admin"):
+        super().__init__(app)
+        self.prefix = prefix
+    
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        
+        # If 401 and it's an admin request, redirect to login
+        if response.status_code == 401:
+            if request.url.path.startswith(self.prefix):
+                # Check if it's not already the login page
+                if "/login" not in request.url.path:
+                    return RedirectResponse(url=f"{self.prefix}/login", status_code=303)
+        
+        return response
+
 
 
 def create_ui_router(
@@ -56,10 +90,10 @@ def create_ui_router(
     prefix: str = "/admin",
     title: str = "Monglo Admin",
     logo: str | None = None,
-    brand_color: str = "#10b981",  # Green
-    auth_dependency: Any | None = None,  # NEW: Pass through from setup_ui
+    brand_color: str = "#10b981", 
+    auth_backend: Any | None = None, 
 ) -> APIRouter:
-    from fastapi import Depends
+    from fastapi import Depends, HTTPException, status
     
     # Exclude admin routes from OpenAPI schema
     router = APIRouter(prefix=prefix, tags=["Monglo Admin UI"], include_in_schema=False)
@@ -69,12 +103,12 @@ def create_ui_router(
     
     # Helper to conditionally apply auth dependency
     def get_dependencies():
-        if auth_dependency:
-            return [Depends(auth_dependency)]
+        if auth_backend:
+            return [Depends(create_auth_dependency(auth_backend))]
         return []
     
-    # Built-in login route (if auth is enabled)
-    if auth_dependency:
+    # Built-in login/logout routes (if auth is enabled)
+    if auth_backend:
         @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
         async def login_page(request: Request, error: str = None):
             """Built-in login page"""
@@ -87,22 +121,30 @@ def create_ui_router(
                 "error": error
             })
         
+        @router.post("/login", include_in_schema=False)
+        async def handle_login(request: Request):
+            """Built-in login handler using auth backend"""
+            success = await auth_backend.login(request)
+            
+            if success:
+                return RedirectResponse(url=f"{prefix}/", status_code=303)
+            else:
+                return RedirectResponse(
+                    url=f"{prefix}/login?error=Invalid+credentials",
+                    status_code=303
+                )
+        
         @router.get("/logout", include_in_schema=False)
         async def logout_route(request: Request):
-            """Built-in logout route"""
-            # Developer should implement POST /login to handle login
-            # This just provides a logout endpoint
-            response = RedirectResponse(url=f"{prefix}/login", status_code=303)
-            # Clear common cookie names (developer may need custom logout logic)
-            response.delete_cookie("session")
-            response.delete_cookie("token")
-            response.delete_cookie("monglo_session")
-            return response
+            """Built-in logout route using auth backend"""
+            await auth_backend.logout(request)
+            return RedirectResponse(url=f"{prefix}/login", status_code=303)
+
 
     
-    # ==================== UI ROUTES ====================
+    #  UI ROUTES 
     
-    @router.get("/", response_class=HTMLResponse, name="admin_home", dependencies=get_dependencies())
+    @router.get("/", response_class=HTMLResponse, name="admin_home", dependencies=get_dependencies(), include_in_schema=False)
     async def admin_home(request: Request):
         collections = []
         
@@ -112,7 +154,7 @@ def create_ui_router(
                 "name": name,
                 "display_name": admin.display_name,
                 "count": count,
-                "relationships": len(admin.relationships)  # Add relationship count
+                "relationships": len(admin.relationships)
             })
         
         return templates.TemplateResponse("admin_home.html", {
@@ -125,7 +167,7 @@ def create_ui_router(
             "prefix": prefix
         })
     
-    @router.get("/relationships", response_class=HTMLResponse, name="relationship_graph", dependencies=get_dependencies())
+    @router.get("/relationships", response_class=HTMLResponse, name="relationship_graph", dependencies=get_dependencies(), include_in_schema=False)
     async def relationship_graph(request: Request):
         """Display relationship graph visualization"""
         # Collect all relationships across collections
@@ -152,7 +194,7 @@ def create_ui_router(
             "prefix": prefix
         })
     
-    @router.get("/{collection}", response_class=HTMLResponse, name="table_view", dependencies=get_dependencies())
+    @router.get("/{collection}", response_class=HTMLResponse, name="table_view", dependencies=get_dependencies(), include_in_schema=False)
     async def table_view(
         request: Request,
         collection: str,
@@ -197,7 +239,7 @@ def create_ui_router(
             "prefix": prefix
         })
     
-    @router.get("/{collection}/document/{id}", response_class=HTMLResponse, name="document_view", dependencies=get_dependencies())
+    @router.get("/{collection}/document/{id}", response_class=HTMLResponse, name="document_view", dependencies=get_dependencies(), include_in_schema=False)
     async def document_view(
         request: Request,
         collection: str,
@@ -240,9 +282,9 @@ def create_ui_router(
         })
     
     
-    # ==================== API ROUTES (for UI interactions) ====================
+    #  API ROUTES (for UI interactions) 
     
-    @router.get("/{collection}/{id}/json", name="get_document_json", dependencies=get_dependencies())
+    @router.get("/{collection}/{id}/json", name="get_document_json", dependencies=get_dependencies(), include_in_schema=False)
     async def get_document_json(collection: str, id: str):
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
@@ -258,7 +300,7 @@ def create_ui_router(
         
         return {" success": True, "document": serialized}
     
-    @router.get("/{collection}/list", name="list_documents_json", dependencies=get_dependencies())
+    @router.get("/{collection}/list", name="list_documents_json", dependencies=get_dependencies(), include_in_schema=False)
     async def list_documents_json(
         collection: str,
         per_page: int = 20,
@@ -312,7 +354,7 @@ def create_ui_router(
             "per_page": result["per_page"]
         }
     
-    @router.delete("/{collection}/{id}", name="delete_document", dependencies=get_dependencies())
+    @router.delete("/{collection}/{id}", name="delete_document", dependencies=get_dependencies(), include_in_schema=False)
     async def delete_document(collection: str, id: str):
         from ..operations.crud import CRUDOperations
         
@@ -338,7 +380,7 @@ def create_ui_router(
         
         return {"success": True, "document": serialized}
     
-    @router.post("/{collection}", name="create_document", dependencies=get_dependencies())
+    @router.post("/{collection}", name="create_document", dependencies=get_dependencies(), include_in_schema=False)
     async def create_document(collection: str, data: dict):
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
@@ -393,6 +435,27 @@ def _setup_templates() -> Jinja2Templates:
     
     return templates
 
+
+def create_auth_dependency(auth_backend: Any):
+    """
+    Create a FastAPI dependency from an AuthenticationBackend instance.
+    
+    This dependency will check authentication and raise 401 if not authenticated.
+    """
+    async def auth_dependency(request: Request):
+        from fastapi import HTTPException, status
+        
+        is_authenticated = await auth_backend.authenticate(request)
+        if not is_authenticated:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated"
+            )
+        return True
+    
+    return auth_dependency
+
+
 async def _get_all_collections(engine: MongloEngine) -> list[dict[str, Any]]:
     collections = []
     for name, admin in engine.registry._collections.items():
@@ -401,6 +464,6 @@ async def _get_all_collections(engine: MongloEngine) -> list[dict[str, Any]]:
             "name": name,
             "display_name": admin.display_name,
             "count": count,
-            "relationships": len(admin.relationships)  # Include relationship count
+            "relationships": len(admin.relationships) 
         })
     return collections

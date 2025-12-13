@@ -33,6 +33,13 @@ engine = MongloEngine(
     auto_discover=False  # Don't auto-discover - we'll register custom admins manually
 )
 
+# Setup admin UI with branding
+setup_ui(
+    app,
+    engine=engine,
+    title="E-Commerce Admin",
+    prefix="/custom_admin",
+)
 
 # STARTUP & SHUTDOWN
 
@@ -51,14 +58,6 @@ async def startup():
     # Then initialize monglo engine (discover relationships, etc.)
     await engine.initialize()
     
-    # Setup admin UI with branding
-    setup_ui(
-        app,
-        engine=engine,
-        title="E-Commerce Admin",
-        prefix="/custom_admin",
-    )
-    
     # Setup REST API router
     app.include_router(
         create_fastapi_router(engine, prefix="/api"),
@@ -66,10 +65,6 @@ async def startup():
         tags=["API"]
     )
     
-    print("✅ Application started successfully!")
-    print(f"   📊 Admin Panel: http://localhost:8000/custom_admin")
-    print(f"   🔌 API Docs: http://localhost:8000/docs")
-
 
 @app.on_event("shutdown")
 async def shutdown():

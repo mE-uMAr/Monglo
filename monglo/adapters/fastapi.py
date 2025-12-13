@@ -17,7 +17,7 @@ def create_fastapi_router(
     
     #COLLECTIONS LIST 
     
-    @router.get("/", summary="List all collections")
+    @router.get("/", summary="List all collections", include_in_schema=False)
     async def list_collections():
         collections = []
         
@@ -34,7 +34,7 @@ def create_fastapi_router(
     
     #COLLECTION ROUTES
     
-    @router.get("/{collection}", summary="List documents")
+    @router.get("/{collection}", summary="List documents", include_in_schema=False)
     async def list_documents(
         collection: str,
         page: int = Query(1, ge=1, description="Page number"),
@@ -75,7 +75,7 @@ def create_fastapi_router(
             "items": serialized_items
         }
     
-    @router.get("/{collection}/{id}", summary="Get document")
+    @router.get("/{collection}/{id}", summary="Get document", include_in_schema=False)
     async def get_document(collection: str, id: str):
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
@@ -104,7 +104,7 @@ def create_fastapi_router(
         
         return {"document": serialized}
     
-    @router.post("/{collection}", summary="Create document", status_code=status.HTTP_201_CREATED)
+    @router.post("/{collection}", summary="Create document", status_code=status.HTTP_201_CREATED, include_in_schema=False)
     async def create_document(collection: str, data: dict):
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
@@ -126,7 +126,7 @@ def create_fastapi_router(
         
         return {"success": True, "document": serialized}
     
-    @router.put("/{collection}/{id}", summary="Update document")
+    @router.put("/{collection}/{id}", summary="Update document", include_in_schema=False)
     async def update_document(collection: str, id: str, data: dict):
         from ..operations.crud import CRUDOperations
         from ..serializers.json import JSONSerializer
@@ -155,7 +155,7 @@ def create_fastapi_router(
         
         return {"success": True, "document": serialized}
     
-    @router.delete("/{collection}/{id}", summary="Delete document")
+    @router.delete("/{collection}/{id}", summary="Delete document", include_in_schema=False)
     async def delete_document(collection: str, id: str):
         from ..operations.crud import CRUDOperations
         
@@ -181,7 +181,7 @@ def create_fastapi_router(
     
     # VIEW CONFIGURATION ROUTES 
     
-    @router.get("/{collection}/config/table", summary="Get table view config")
+    @router.get("/{collection}/config/table", summary="Get table view config", include_in_schema=False)
     async def get_table_config(collection: str):
         from ..views.table_view import TableView
         
@@ -198,7 +198,7 @@ def create_fastapi_router(
         
         return {"config": config}
     
-    @router.get("/{collection}/config/document", summary="Get document view config")
+    @router.get("/{collection}/config/document", summary="Get document view config", include_in_schema=False)
     async def get_document_config(collection: str):
         from ..views.document_view import DocumentView
         
@@ -215,7 +215,7 @@ def create_fastapi_router(
         
         return {"config": config}
     
-    @router.get("/{collection}/relationships", summary="Get relationships")
+    @router.get("/{collection}/relationships", summary="Get relationships", include_in_schema=False)
     async def get_relationships(collection: str):
         try:
             admin = engine.registry.get(collection)

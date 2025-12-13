@@ -19,11 +19,28 @@ async def seed_database(db: AsyncIOMotorDatabase):
     await db.categories.delete_many({})
     
     # USERS
+    # Create admin user with hashed password for authentication
+    import hashlib
+    
+    def hash_password(password: str) -> str:
+        """Hash password using SHA256 (for demo - use bcrypt in production)"""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
     users_data = [
+        {
+            "_id": ObjectId(),
+            "name": "Admin User",
+            "email": "admin@example.com",
+            "hashed_password": hash_password("admin123"),  # Password: admin123
+            "role": "admin",
+            "status": "active",
+            "created_at": "2024-01-01"
+        },
         {
             "_id": ObjectId(),
             "name": "Alice Johnson",
             "email": "alice@example.com",
+            "hashed_password": hash_password("alice123"),  # Password: alice123
             "role": "customer",
             "status": "active",
             "created_at": "2024-01-15"
@@ -32,14 +49,16 @@ async def seed_database(db: AsyncIOMotorDatabase):
             "_id": ObjectId(),
             "name": "Bob Smith",
             "email": "bob@example.com",
+            "hashed_password": hash_password("bob123"),  # Password: bob123
             "role": "customer",
             "status": "active",
             "created_at": "2024-02-20"
         },
         {
             "_id": ObjectId(),
-            "name": "Charlie Admin",
+            "name": "Charlie Manager",
             "email": "charlie@example.com",
+            "hashed_password": hash_password("charlie123"),  # Password: charlie123
             "role": "admin",
             "status": "active",
             "created_at": "2024-01-01"
@@ -49,6 +68,8 @@ async def seed_database(db: AsyncIOMotorDatabase):
     await db.users.insert_many(users_data)
     user_ids = [u["_id"] for u in users_data]
     print(f"✅ Created {len(users_data)} users")
+    print(f"   🔐 Admin credentials: admin@example.com / admin123")
+
     
     # CATEGORIES
     categories_data = [
