@@ -4,16 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "Monglo"
-version = "0.0.1"
+version = "0.1.0"
 description = "A framework-agnostic MongoDB admin library with intelligent relationship detection and dual views"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Mehar Umar", email = "contact@me-umar.codes"},
+    {name = "Mehar Umar", email = "contact@meharumar.codes"},
 ]
 maintainers = [
-    {name = "Mehar Umar", email = "contact@me-umar.codes"},
+    {name = "Mehar Umar", email = "contact@meharumar.codes"},
 ]
 keywords = [
     "mongodb",
@@ -28,6 +28,7 @@ keywords = [
     "relationships",
     "crud",
     "schema",
+    "mongoadmin"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -103,6 +104,7 @@ packages = ["monglo"]
 include = [
     "/monglo",
     "/tests",
+    "/monglo_ui",
     "/examples",
     "/docs",
     "/README.md",

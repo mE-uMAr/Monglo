@@ -1,124 +1,162 @@
-# Advanced Features Example
+# E-Commerce Admin - Advanced Example
 
-This example shows advanced Monglo features:
-- Custom authentication
-- Audit logging
-- Bulk operations
-- Transactions
-- Data validation
-- Custom fields
+A comprehensive example demonstrating Monglo's advanced features with a modular, production-ready architecture.
 
-## Clear Separation: Library vs Application
+## 🏗️ Architecture
 
-### What the LIBRARY Does (Automatic)
-✅ All routing  
-✅ All serialization  
-✅ All UI rendering  
-✅ Schema detection  
-✅ Relationship detection  
-✅ CRUD operations  
-✅ Error handling  
-
-### What YOU Write (Application Logic)
-📝 Business logic  
-📝 Custom auth rules  
-📝 Specific validations  
-📝 Custom actions  
-
-## Example: Custom Authentication
-
-```python
-from monglo.auth import SimpleAuthProvider
-
-# APPLICATION CODE - You define who can access
-auth = SimpleAuthProvider(users={
-    "admin": {
-        "password_hash": SimpleAuthProvider.hash_password("admin123"),
-        "role": "admin"
-    },
-    "viewer": {
-        "password_hash": SimpleAuthProvider.hash_password("view123"),
-        "role": "readonly"
-    }
-})
-
-# LIBRARY CODE - Monglo handles the rest
-engine = MongloEngine(database=db, auth_provider=auth)
+```
+advanced_example/
+├── app.py           # Main FastAPI application
+├── admin_setup.py   # Custom admin configurations
+├── db.py           # Database seeding
+└── README.md       # This file
 ```
 
-## Example: Audit Logging
+## ✨ Features Demonstrated
 
-```python
-from monglo.operations.audit import AuditLogger
+### 1. **Modular Structure**
+- Separated concerns: app, admin config, database
+- Easy to maintain and extend
+- Production-ready organization
 
-# APPLICATION CODE - Initialize logger
-logger = AuditLogger(database=db)
+### 2. **Custom Admin Classes**
+Each collection has a custom `ModelAdmin` class with:
+- 🎨 **Custom display names** with emojis
+- 📋 **List display** - which columns to show
+- 🔍 **Search fields** - searchable columns
+- 🔄 **Default sorting** - newest first, alphabetical, etc.
+- 📄 **Pagination** - items per page
+- 📝 **Field schemas** - proper types for forms
 
-# LIBRARY CODE - Monglo logs automatically
-# Every create, update, delete is logged with:
-# - Timestamp
-# - User
-# - Action
-# - Before/after state
+### 3. **Realistic E-Commerce Data**
+- **Users** with roles, preferences, avatars
+- **Categories** with slugs and icons
+- **Products** with nested specs, images, tags
+- **Orders** with embedded items and addresses
+- **Reviews** with ratings and verification
+
+### 4. **Advanced Relationships**
+- `Orders.user_id` → `Users`
+- `Orders.items[].product_id` → `Products` (embedded)
+- `Products.category_id` → `Categories`
+- `Reviews.user_id` → `Users`
+- `Reviews.product_id` → `Products`
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+```bash
+pip install fastapi motor monglo uvicorn
 ```
 
-## Example: Bulk Operations
+### 2. Start MongoDB
+```bash
+# Using Docker
+docker run -d -p 27017:27017 mongo:latest
 
-```python
-# APPLICATION CODE - Your business logic
-new_users = [
-    {"name": f"User {i}", "email": f"user{i}@example.com"}
-    for i in range(100)
-]
-
-# LIBRARY CODE - Efficient bulk insert
-created = await crud.bulk_create(new_users)
-# All 100 users inserted in one operation!
+# Or use your local MongoDB
+mongod
 ```
 
-## Example: Transactions
-
-```python
-from monglo.operations.transactions import TransactionManager
-
-# APPLICATION CODE - Your transaction logic
-manager = TransactionManager(client)
-
-async with manager.transaction() as session:
-    # LIBRARY CODE - Monglo ensures ACID
-    user = await users_crud.create(user_data, session=session)
-    order = await orders_crud.create(order_data, session=session)
-    # Both succeed or both fail - atomic!
-```
-
-## Example: Custom Validation
-
-```python
-from monglo.operations.validation import DataValidator
-
-# APPLICATION CODE - Your validation rules
-validator = DataValidator(collection_admin)
-
-# Before creating
-errors = await validator.validate(data)
-if errors:
-    return {"errors": errors}  # Your error handling
-
-# LIBRARY CODE - Monglo creates if valid
-created = await crud.create(data)
-```
-
-## Running This Example
-
+### 3. Run the App
 ```bash
 cd examples/advanced_example
-pip install -e "../../[dev]"
 python app.py
 ```
 
-## Key Takeaway
+### 4. Access Admin Panel
+Open your browser to:
+- **Admin Panel**: http://localhost:8000/admin
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000
 
-**YOU write**: Business logic, auth rules, custom validations  
-**LIBRARY handles**: Everything else (routing, UI, serialization, CRUD, etc.)
+## 📚 Code Highlights
 
-This is the power of Monglo - you focus on your domain logic, we handle the infrastructure!
+### Custom Admin Class Example
+```python
+class ProductAdmin(ModelAdmin):
+    display_name = "🛍️ Products"
+    list_display = ["sku", "name", "price", "stock", "is_active"]
+    search_fields = ["name", "sku", "description"]
+    default_sort = [("created_at", -1)]
+    per_page = 25
+    
+    fields = {
+        "name": StringField(required=True),
+        "price": FloatField(required=True),
+        "stock": IntField(default=0),
+        # ... more fields
+    }
+```
+
+### Registration
+```python
+async def setup_admin(engine):
+    registry = engine.registry
+    registry.register("products", ProductAdmin)
+    registry.register("users", UserAdmin)
+    # ... more registrations
+```
+
+### Main App
+```python
+@app.on_event("startup")
+async def startup():
+    await seed_database(db)
+    await engine.initialize()
+    await setup_admin(engine)
+    setup_ui(app, engine=engine, title="E-Commerce Admin")
+```
+
+## 🎯 What You'll Learn
+
+1. **Modular Architecture** - Separate files for different concerns
+2. **Custom Configurations** - Tailor admin for your needs
+3. **Field Definitions** - Proper typing for forms
+4. **Relationship Handling** - Both direct and embedded
+5. **Search & Filter** - Make data discoverable
+6. **Branding** - Custom colors and titles
+
+## 💡 Customization
+
+### Add New Collection
+1. Add data in `db.py`
+2. Create admin class in `admin_setup.py`
+3. Register in `setup_admin()`
+
+### Modify Display
+Edit the `list_display` in your admin class:
+```python
+list_display = ["field1", "field2", "field3"]
+```
+
+### Change Search
+Edit the `search_fields`:
+```python
+search_fields = ["name", "email", "description"]
+```
+
+### Adjust Branding
+In `app.py`:
+```python
+setup_ui(
+    app,
+    engine=engine,
+    title="My App",
+    brand_color="#FF5722"
+)
+```
+
+## 📖 Next Steps
+
+- Add custom filters
+- Implement bulk actions
+- Add export functionality
+- Create custom views
+- Add authentication
+
+## 🔗 Resources
+
+- [Monglo Documentation](../../README.md)
+- [FastAPI Docs](https://fastapi.tiangolo.com)
+- [MongoDB Motor](https://motor.readthedocs.io)

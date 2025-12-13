@@ -13,11 +13,11 @@ recursive-include examples *.py *.md *.txt *.toml *.json
 recursive-include tests *.py
 
 # UI package
-recursive-include mongoadmin_ui *.js *.css *.html *.json
+recursive-include monglo_ui *.js *.css *.html *.json
 
 # Include package data
-recursive-include mongoadmin *.py
-recursive-include mongoadmin py.typed
+recursive-include monglo *.py
+recursive-include monglo py.typed
 
 # Exclude unnecessary files
 global-exclude __pycache__
